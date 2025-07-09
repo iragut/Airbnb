@@ -1,11 +1,41 @@
 CREATE TABLE Users (
-    id INT AUTO_INCREMENT,
-    username TEXT NOT NULL,
-    password TEXT NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(30) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(40) NOT NULL,
     phone_number VARCHAR(15) NOT NULL,
-    email TEXT NOT NULL,
-    created_at DATETIME,
-    PRIMARY KEY (id)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    role ENUM('user', 'host', 'moderator', 'admin') NOT NULL DEFAULT 'user'
 );
 
-CREATE TABLE 
+CREATE TABLE Posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    country VARCHAR(40) NOT NULL,
+    city VARCHAR(100),
+    address VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    type ENUM('apartment', 'house', 'room', 'other') NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE PersonalData (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    first_name VARCHAR(30),
+    last_name VARCHAR(30),
+    birth_date DATE,
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    
+    
+    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
