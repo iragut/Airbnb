@@ -45,7 +45,8 @@
                         <option value="+86">🇨🇳 +86</option>
                         <option value="+81">🇯🇵 +81</option>
                     </select>
-                    <input type="tel" name="number" placeholder="Phone Number" required>
+                    <input type="tel" name="number" placeholder="Phone Number" pattern="[0-9]*" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+
                 </div>
                 
                 <button type="submit" class="btn btn-register">Sign Up</button>

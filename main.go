@@ -57,5 +57,7 @@ func main() {
 	http.HandleFunc("/register", register_handler)
 
 	log.Println("Server starting on :8080")
+
+	init_database()
 	http.ListenAndServe(":8080", nil)
 }
