@@ -68,6 +68,36 @@ func register_handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func explore_handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tmpl := template.Must(template.ParseFiles("template/explore_page.html"))
+	err := tmpl.Execute(w, nil)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Println("Error executing template:", err)
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	destination := r.FormValue("destination")
+	checkin := r.FormValue("checkin")
+	checkout := r.FormValue("checkout")
+	guests := r.FormValue("guests")
+
+	log.Printf("Search request: destination=%s, checkin=%s, checkout=%s, guests=%s",
+		destination, checkin, checkout, guests)
+
+	// For now, just redirect back to main page
+	// Later you can create a search results page
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func main() {
 	fs := http.FileServer(http.Dir("static/"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
@@ -75,6 +105,7 @@ func main() {
 	http.HandleFunc("/", main_page_handler)
 	http.HandleFunc("/login", login_handler)
 	http.HandleFunc("/register", register_handler)
+	http.HandleFunc("/explore", explore_handler)
 
 	log.Println("Server starting on :8080")
 
