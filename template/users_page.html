@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{if .IsOwnProfile}}My Profile{{else}}{{.User.Username}}'s Profile{{end}} - AirBnB Clone</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo">AirBnBClone</a>
+        
+        <div class="auth-buttons">
+            <a href="/my-profile" class="btn btn-login">My Profile</a>
+            <a href="/logout" class="btn btn-signup">Logout</a>
+        </div>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <div class="avatar-placeholder">
+                    {{if .User.FirstName}}{{slice .User.FirstName 0 1}}{{else}}{{slice .User.Username 0 1}}{{end}}
+                </div>
+            </div>
+            <div class="profile-info">
+                <h1>{{if .User.FirstName}}{{.User.FirstName}} {{.User.LastName}}{{else}}{{.User.Username}}{{end}}</h1>
+                <p class="username">@{{.User.Username}}</p>
+                <p class="role">{{.User.Role}}</p>
+                <p class="member-since">Member since {{.User.CreatedAt}}</p>
+            </div>
+        </div>
+
+        <div class="profile-content">
+            {{if .IsOwnProfile}}
+                <div class="profile-section">
+                    <h2>My Account</h2>
+                    <div class="account-info">
+                        <div class="info-item">
+                            <label>Email:</label>
+                            <span>{{.User.Email}}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Phone:</label>
+                            <span>{{.User.PhoneNumber}}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>User ID:</label>
+                            <span>{{.User.ID}}</span>
+                        </div>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="btn btn-edit">Edit Profile</button>
+                        <button class="btn btn-settings">Settings</button>
+                    </div>
+                </div>
+            {{else}}
+                <div class="profile-section">
+                    <h2>About {{.User.Username}}</h2>
+                    <p>This is {{.User.Username}}'s profile page.</p>
+                    <p>Member since {{.User.CreatedAt}}</p>
+                </div>
+            {{end}}
+
+            <div class="profile-section">
+                <h2>{{if .IsOwnProfile}}My Listings{{else}}Listings{{end}}</h2>
+                <div class="listings-grid">
+                    <!-- This will be populated with actual listings later -->
+                    <div class="no-listings">
+                        <p>{{if .IsOwnProfile}}You haven't created any listings yet.{{else}}No listings available.{{end}}</p>
+                        {{if .IsOwnProfile}}
+                            <button class="btn btn-create">Create Your First Listing</button>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+
+            {{if .IsOwnProfile}}
+                <div class="profile-section">
+                    <h2>My Bookings</h2>
+                    <div class="bookings-list">
+                        <p>No bookings yet.</p>
+                    </div>
+                </div>
+            {{end}}
+        </div>
+    </div>
+</body>
+</html>

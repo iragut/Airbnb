@@ -579,3 +579,162 @@ body {
         height: 200px;
     }
 }
+
+.profile-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 40px;
+    padding: 40px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.profile-avatar {
+    margin-right: 30px;
+}
+
+.avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(45deg, #ff5a5f, #e00007);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 48px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.profile-info h1 {
+    margin: 0 0 10px 0;
+    color: #222;
+    font-size: 32px;
+}
+
+.username {
+    color: #717171;
+    font-size: 18px;
+    margin: 5px 0;
+}
+
+.role {
+    color: #ff5a5f;
+    font-weight: bold;
+    text-transform: capitalize;
+    margin: 5px 0;
+}
+
+.member-since {
+    color: #717171;
+    font-size: 14px;
+    margin: 10px 0 0 0;
+}
+
+.profile-content {
+    display: grid;
+    gap: 30px;
+}
+
+.profile-section {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.profile-section h2 {
+    color: #222;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.account-info {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.info-item label {
+    font-weight: bold;
+    color: #222;
+}
+
+.info-item span {
+    color: #717171;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-edit, .btn-settings, .btn-create {
+    background: #ff5a5f;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn-edit:hover, .btn-settings:hover, .btn-create:hover {
+    background: #e00007;
+}
+
+.listings-grid, .bookings-list {
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.no-listings {
+    text-align: center;
+    color: #717171;
+}
+
+.no-listings p {
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .profile-avatar {
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+
+    .profile-actions {
+        flex-direction: column;
+    }
+
+    .info-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}
