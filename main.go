@@ -136,33 +136,53 @@ func register_handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func explore_handler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		// Get post counts for each city
+		number_of_posts_city := make(map[string]int)
+
+		number_of_posts_city["New York"] = get_post_count_by_city("New York")
+		number_of_posts_city["Paris"] = get_post_count_by_city("Paris")
+		number_of_posts_city["Tokyo"] = get_post_count_by_city("Tokyo")
+		number_of_posts_city["London"] = get_post_count_by_city("London")
+		number_of_posts_city["Bali"] = get_post_count_by_city("Bali")
+		number_of_posts_city["Dubai"] = get_post_count_by_city("Dubai")
+		number_of_posts_city["Rome"] = get_post_count_by_city("Rome")
+		number_of_posts_city["Barcelona"] = get_post_count_by_city("Barcelona")
+
+		template_data := struct {
+			CityAndPosts map[string]int
+		}{
+			CityAndPosts: number_of_posts_city,
+		}
+
+		tmpl := template.Must(template.ParseFiles("template/explore_page.html"))
+		err := tmpl.Execute(w, template_data)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Println("Error executing template:", err)
+		}
+
+	case http.MethodPost:
+		destination := r.FormValue("destination")
+		checkin := r.FormValue("checkin")
+		checkout := r.FormValue("checkout")
+		guests := r.FormValue("guests")
+
+		log.Printf("Search request: destination=%s, checkin=%s, checkout=%s, guests=%s",
+			destination, checkin, checkout, guests)
+
+		// Redirect to listings page with search parameters
+		redirectURL := "/listings"
+		if destination != "" {
+			redirectURL += "?destination=" + destination
+		}
+
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
 	}
-
-	tmpl := template.Must(template.ParseFiles("template/explore_page.html"))
-	err := tmpl.Execute(w, nil)
-	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Println("Error executing template:", err)
-	}
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	destination := r.FormValue("destination")
-	checkin := r.FormValue("checkin")
-	checkout := r.FormValue("checkout")
-	guests := r.FormValue("guests")
-
-	log.Printf("Search request: destination=%s, checkin=%s, checkout=%s, guests=%s",
-		destination, checkin, checkout, guests)
-
-	// For now, just redirect back to main page
-	// Later you can create a search results page
-	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func main() {

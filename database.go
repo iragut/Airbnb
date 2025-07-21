@@ -26,6 +26,20 @@ type UserData struct {
 	LastName    string
 }
 
+// Extract number of posts in a city
+func get_post_count_by_city(city string) int {
+	query := `SELECT COUNT(*) FROM Posts WHERE city = ?`
+	var count int
+	err := db.QueryRow(query, city).Scan(&count)
+
+	if err != nil {
+		log.Printf("Error querying post count for city %s: %v", city, err)
+		return 0
+	}
+
+	return count
+}
+
 func get_user_data(user_id int) *UserData {
 	query := `
 		SELECT u.id, u.username, u.email, u.phone_number, u.role, u.created_at,
@@ -90,6 +104,29 @@ func create_user(email string, password string, username string, phone_number st
 	if err != nil {
 		log.Fatalf("Error creating user: %v", err)
 	}
+}
+
+func create_post(user_id int, title string, country string, city string, address string, description string, price float64, postType string) {
+	query := "INSERT INTO Posts (user_id, title, country, city, address, description, price, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := db.Exec(query, user_id, title, country, city, address, description, price, postType)
+	if err != nil {
+		log.Fatalf("Error creating post: %v", err)
+	}
+	log.Println("Post created successfully")
+}
+
+// Updated test data creation with all required fields
+func create_posts_test_data() {
+	create_post(1, "Cozy Apartment", "USA", "New York", "123 Broadway St", "A cozy apartment in the city center.", 100.0, "apartment")
+	create_post(1, "Luxury Loft", "Indonesia", "Bali", "456 Beach Road", "A luxury loft with ocean views.", 150.0, "apartment")
+	create_post(1, "Beach House", "Spain", "Barcelona", "789 Coastal Ave", "A beautiful beach house with ocean view.", 250.0, "house")
+	create_post(1, "Mountain Cabin", "Japan", "Tokyo", "321 Mountain Path", "A rustic cabin in the mountains.", 200.0, "house")
+	create_post(1, "Luxury Villa", "France", "Paris", "654 Champs Elysees", "A luxury villa with private pool.", 500.0, "house")
+	create_post(1, "City Loft", "UK", "London", "987 Thames St", "A modern loft in the heart of the city.", 300.0, "apartment")
+	create_post(1, "Countryside Cottage", "Italy", "Rome", "147 Villa Road", "A charming cottage in the countryside.", 180.0, "house")
+	create_post(1, "Penthouse Suite", "UAE", "Dubai", "258 Burj St", "A penthouse suite with stunning views.", 400.0, "apartment")
+	create_post(1, "Historic Mansion", "France", "Paris", "369 Historic Blvd", "A historic mansion with rich history.", 600.0, "house")
+	log.Println("Test posts created successfully")
 }
 
 func connect_to_database() *sql.DB {
@@ -168,6 +205,7 @@ func init_database() {
 		log.Println("Tables does not exist, creating tables...")
 		create_tables()
 		create_user("test@test.com", "test", "Test User", "1234567890", "admin")
+		create_posts_test_data()
 	} else {
 		log.Println("Tables exists, skipping creation.")
 	}

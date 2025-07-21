@@ -10,39 +10,41 @@
         <a href="/" class="logo">AirBnBClone</a>
         
         <div class="search-container">
-            <div class="search-bar">
-                <div class="search-field">
-                    <label>Where</label>
-                    <input type="text" placeholder="Search destinations" id="destination">
+            <form action="/explore" method="POST" style="display: contents;">
+                <div class="search-bar">
+                    <div class="search-field">
+                        <label>Where</label>
+                        <input type="text" name="destination" placeholder="Search destinations" id="destination">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Check in</label>
+                        <input type="date" name="checkin" id="checkin">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Check out</label>
+                        <input type="date" name="checkout" id="checkout">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Who</label>
+                        <input type="text" name="guests" placeholder="Add guests" id="guests">
+                    </div>
+                    <button type="submit" class="search-button">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" fill="white"/>
+                        </svg>
+                    </button>
+                    <a href="/explore" class="explore-button active">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13z" fill="white"/>
+                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="white"/>
+                        </svg>
+                        Explore
+                    </a>
                 </div>
-                <div class="search-divider"></div>
-                <div class="search-field">
-                    <label>Check in</label>
-                    <input type="date" id="checkin">
-                </div>
-                <div class="search-divider"></div>
-                <div class="search-field">
-                    <label>Check out</label>
-                    <input type="date" id="checkout">
-                </div>
-                <div class="search-divider"></div>
-                <div class="search-field">
-                    <label>Who</label>
-                    <input type="text" placeholder="Add guests" id="guests">
-                </div>
-                <button class="search-button" onclick="performSearch()">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" fill="white"/>
-                    </svg>
-                </button>
-                <a href="/explore" class="explore-button active">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13z" fill="white"/>
-                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="white"/>
-                    </svg>
-                    Explore
-                </a>
-            </div>
+            </form>
         </div>
         
         <div class="auth-buttons">
@@ -58,74 +60,74 @@
         </div>
 
         <div class="location-grid">
-            <div class="location-card">
+            <div class="location-card" onclick="searchCity('Paris')">
                 <div class="location-image" style="background-image: url('/static/images/paris.jpg');">
                     <div class="location-overlay">
                         <h3>Paris</h3>
-                        <p>245 properties</p>
+                        <p>{{index .CityAndPosts "Paris"}} properties</p>
                     </div>
                 </div>
             </div>
 
-            <div class="location-card">
+            <div class="location-card" onclick="searchCity('Tokyo')">
                 <div class="location-image" style="background-image: url('/static/images/tokio.jpg');">
                     <div class="location-overlay">
                         <h3>Tokyo</h3>
-                        <p>189 properties</p>
+                        <p>{{index .CityAndPosts "Tokyo"}} properties</p>
                     </div>
                 </div>
             </div>
 
-            <div class="location-card">
+            <div class="location-card" onclick="searchCity('New York')">
                 <div class="location-image" style="background-image: url('/static/images/new_york.jpg');">
                     <div class="location-overlay">
                         <h3>New York</h3>
-                        <p>512 properties</p>
+                        <p>{{index .CityAndPosts "New York"}} properties</p>
                     </div>
                 </div>
             </div>
 
-            <div class="location-card">
+            <div class="location-card" onclick="searchCity('London')">
                 <div class="location-image" style="background-image: url('/static/images/london.jpg');">
                     <div class="location-overlay">
                         <h3>London</h3>
-                        <p>367 properties</p>
+                        <p>{{index .CityAndPosts "London"}} properties</p>
                     </div>
                 </div>
             </div>
 
-            <div class="location-card">
+            <div class="location-card" onclick="searchCity('Bali')">
                 <div class="location-image" style="background-image: url('/static/images/bali.jpg');">
                     <div class="location-overlay">
                         <h3>Bali</h3>
-                        <p>298 properties</p>
+                        <p>{{index .CityAndPosts "Bali"}} properties</p>
                     </div>
                 </div>
             </div>
 
-            <div class="location-card">
+            <div class="location-card" onclick="searchCity('Barcelona')">
                 <div class="location-image" style="background-image: url('/static/images/barcelona.jpg');">
                     <div class="location-overlay">
                         <h3>Barcelona</h3>
-                        <p>156 properties</p>
+                        <p>{{index .CityAndPosts "Barcelona"}} properties</p>
                     </div>
                 </div>
             </div>
 
-            <div class="location-card">
+            <div class="location-card" onclick="searchCity('Rome')">
                 <div class="location-image" style="background-image: url('/static/images/rome.jpg');">
                     <div class="location-overlay">
                         <h3>Rome</h3>
-                        <p>223 properties</p>
+                        <p>{{index .CityAndPosts "Rome"}} properties</p>
                     </div>
                 </div>
             </div>
 
-            <div class="location-card">
+            <div class="location-card" onclick="searchCity('Dubai')">
                 <div class="location-image" style="background-image: url('/static/images/dubai.jpg');">
                     <div class="location-overlay">
                         <h3>Dubai</h3>
-                        <p>134 properties</p>
+                        <p>{{index .CityAndPosts "Dubai"}} properties</p>
                     </div>
                 </div>
             </div>
@@ -133,5 +135,12 @@
     </div>
 
     <script src="/static/main.js"></script>
+    <script>
+        function searchCity(city) {
+            // Set the destination field and submit the form
+            document.getElementById('destination').value = city;
+            document.querySelector('form').submit();
+        }
+    </script>
 </body>
 </html>
