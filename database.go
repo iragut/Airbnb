@@ -26,6 +26,149 @@ type UserData struct {
 	LastName    string
 }
 
+type Listing struct {
+	ID          int
+	UserID      int
+	Title       string
+	Country     string
+	City        string
+	Address     string
+	Description string
+	Price       float64
+	Type        string
+	ImageURL    string
+	HasWifi     bool
+	HasKitchen  bool
+	HasAC       bool
+	HasParking  bool
+	CreatedAt   string
+}
+
+type SearchParams struct {
+	Destination  string
+	CheckIn      string
+	CheckOut     string
+	Guests       string
+	MinPrice     float64
+	MaxPrice     float64
+	PropertyType string
+	Page         int
+	Limit        int
+}
+
+type ListingsResult struct {
+	Listings     []Listing
+	TotalResults int
+	TotalPages   int
+	CurrentPage  int
+}
+
+func search_listings(params SearchParams) (*ListingsResult, error) {
+	var listings []Listing
+	var totalCount int
+
+	whereConditions := []string{"1=1"}
+	args := []interface{}{}
+	countArgs := []interface{}{}
+
+	if params.Destination != "" {
+		whereConditions = append(whereConditions, "(city LIKE ? OR country LIKE ? OR title LIKE ?)")
+		searchTerm := "%" + params.Destination + "%"
+		args = append(args, searchTerm, searchTerm, searchTerm)
+		countArgs = append(countArgs, searchTerm, searchTerm, searchTerm)
+	}
+
+	if params.MinPrice > 0 {
+		whereConditions = append(whereConditions, "price >= ?")
+		args = append(args, params.MinPrice)
+		countArgs = append(countArgs, params.MinPrice)
+	}
+
+	if params.MaxPrice > 0 {
+		whereConditions = append(whereConditions, "price <= ?")
+		args = append(args, params.MaxPrice)
+		countArgs = append(countArgs, params.MaxPrice)
+	}
+
+	if params.PropertyType != "" {
+		whereConditions = append(whereConditions, "type = ?")
+		args = append(args, params.PropertyType)
+		countArgs = append(countArgs, params.PropertyType)
+	}
+
+	whereClause := strings.Join(whereConditions, " AND ")
+
+	countQuery := `
+		SELECT COUNT(*) 
+		FROM Posts 
+		WHERE ` + whereClause
+
+	err := db.QueryRow(countQuery, countArgs...).Scan(&totalCount)
+	if err != nil {
+		log.Printf("Error counting listings: %v", err)
+		return nil, err
+	}
+
+	if params.Limit <= 0 {
+		params.Limit = 20
+	}
+	if params.Page <= 0 {
+		params.Page = 1
+	}
+
+	offset := (params.Page - 1) * params.Limit
+	totalPages := (totalCount + params.Limit - 1) / params.Limit
+
+	query := `
+		SELECT p.id, p.user_id, p.title, p.country, p.city, p.address, 
+		       p.description, p.price, p.type, p.created_at,
+		       COALESCE(MIN(i.image_url), '') as image_url,
+		       COALESCE(MAX(a.wifi), false) as has_wifi,
+		       COALESCE(MAX(a.kitchen), false) as has_kitchen,
+		       COALESCE(MAX(a.air_conditioning), false) as has_ac,
+		       COALESCE(MAX(a.parking), false) as has_parking
+		FROM Posts p
+		LEFT JOIN Images i ON p.id = i.post_id
+		LEFT JOIN Amenities a ON p.id = a.post_id
+		WHERE ` + whereClause + `
+		GROUP BY p.id, p.user_id, p.title, p.country, p.city, p.address, p.description, p.price, p.type, p.created_at
+		ORDER BY p.created_at DESC
+		LIMIT ? OFFSET ?`
+
+	args = append(args, params.Limit, offset)
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		log.Printf("Error querying listings: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var listing Listing
+		err := rows.Scan(
+			&listing.ID, &listing.UserID, &listing.Title, &listing.Country,
+			&listing.City, &listing.Address, &listing.Description,
+			&listing.Price, &listing.Type, &listing.CreatedAt,
+			&listing.ImageURL, &listing.HasWifi, &listing.HasKitchen,
+			&listing.HasAC, &listing.HasParking,
+		)
+		if err != nil {
+			log.Printf("Error scanning listing: %v", err)
+			continue
+		}
+
+		listings = append(listings, listing)
+	}
+
+	return &ListingsResult{
+		Listings:     listings,
+		TotalResults: totalCount,
+		TotalPages:   totalPages,
+		CurrentPage:  params.Page,
+	}, nil
+}
+
 // Extract number of posts in a city
 func get_post_count_by_city(city string) int {
 	query := `SELECT COUNT(*) FROM Posts WHERE city = ?`

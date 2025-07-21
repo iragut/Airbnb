@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{if .SearchQuery}}{{.SearchQuery}} - {{end}}Search Results - AirBnB Clone</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo">AirBnBClone</a>
+        
+        <div class="search-container">
+            <form action="/listings" method="GET" style="display: contents;">
+                <div class="search-bar">
+                    <div class="search-field">
+                        <label>Where</label>
+                        <input type="text" name="destination" placeholder="Search destinations" value="{{.SearchParams.Destination}}">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Check in</label>
+                        <input type="date" name="checkin" value="{{.SearchParams.CheckIn}}">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Check out</label>
+                        <input type="date" name="checkout" value="{{.SearchParams.CheckOut}}">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Who</label>
+                        <input type="text" name="guests" placeholder="Add guests" value="{{.SearchParams.Guests}}">
+                    </div>
+                    <button type="submit" class="search-button">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" fill="white"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="auth-buttons">
+            <a href="/login" class="btn btn-login">Login</a>
+            <a href="/register" class="btn btn-signup">Sign Up</a>
+        </div>
+    </div>
+
+    <div class="listings-content">
+        <div class="listings-header">
+            <div class="results-info">
+                <h1>{{if .SearchQuery}}{{.TotalResults}} stays in {{.SearchQuery}}{{else}}{{.TotalResults}} stays available{{end}}</h1>
+                {{if .SearchParams.CheckIn}}<p>{{.SearchParams.CheckIn}} - {{.SearchParams.CheckOut}} • {{.SearchParams.Guests}} guests</p>{{end}}
+            </div>
+            
+            <div class="filters-container">
+                <div class="filters">
+                    <button class="filter-btn" onclick="toggleFilter('price')">
+                        <span>Price</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4.427 9.573L8 13.147l3.573-3.574A.5.5 0 0 1 12.5 10h-9a.5.5 0 0 1 .427-.427z"/>
+                        </svg>
+                    </button>
+                    <button class="filter-btn" onclick="toggleFilter('type')">
+                        <span>Type of place</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4.427 9.573L8 13.147l3.573-3.574A.5.5 0 0 1 12.5 10h-9a.5.5 0 0 1 .427-.427z"/>
+                        </svg>
+                    </button>
+                    <button class="filter-btn" onclick="toggleFilter('amenities')">
+                        <span>Amenities</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4.427 9.573L8 13.147l3.573-3.574A.5.5 0 0 1 12.5 10h-9a.5.5 0 0 1 .427-.427z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="listings-grid">
+            {{if .Listings}}
+                {{range .Listings}}
+                <div class="listing-card" onclick="window.location.href='/property/{{.ID}}'">
+                    <div class="listing-image">
+                        {{if .ImageURL}}
+                        <img src="{{.ImageURL}}" alt="{{.Title}}" loading="lazy">
+                        {{else}}
+                        <div class="image-placeholder">
+                            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                <path d="M40 12H8c-2.21 0-4 1.79-4 4v16c0 2.21 1.79 4 4 4h32c2.21 0 4-1.79 4-4V16c0-2.21-1.79-4-4-4zM8 16h32v16H8V16zm8 12l5-6 5 6 7-8 7 8H16z" fill="#ccc"/>
+                            </svg>
+                        </div>
+                        {{end}}
+                        <button class="wishlist-btn" onclick="event.stopPropagation(); toggleWishlist('{{.ID}}')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="listing-info">
+                        <div class="listing-location">
+                            <h3>{{.City}}, {{.Country}}</h3>
+                            <p class="listing-title">{{.Title}}</p>
+                        </div>
+                        
+                        <div class="listing-details">
+                            <span class="property-type">{{.Type}}</span>
+                            {{if .HasWifi}}<span class="amenity-tag">WiFi</span>{{end}}
+                            {{if .HasKitchen}}<span class="amenity-tag">Kitchen</span>{{end}}
+                        </div>
+                        
+                        <div class="listing-price">
+                            <span class="price">${{printf "%.0f" .Price}}</span>
+                            <span class="per-night">per night</span>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            {{else}}
+                <div class="no-results">
+                    <div class="no-results-content">
+                        <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+                            <path d="M48 8C25.9 8 8 25.9 8 48s17.9 40 40 40 40-17.9 40-40S70.1 8 48 8zm0 72c-17.6 0-32-14.4-32-32s14.4-32 32-32 32 14.4 32 32-14.4 32-32 32z" fill="#ddd"/>
+                            <path d="M52 32h-8v24h8V32zM44 64h8v8h-8v-8z" fill="#ddd"/>
+                        </svg>
+                        <h2>No places found</h2>
+                        <p>Try adjusting your search criteria or browse our popular destinations.</p>
+                        <a href="/explore" class="btn btn-signup">Explore Popular Places</a>
+                    </div>
+                </div>
+            {{end}}
+        </div>
+
+        {{if gt .TotalPages 1}}
+        <div class="pagination">
+            {{if gt .CurrentPage 1}}
+                <a href="?{{.PaginationQuery}}&page={{.PrevPage}}" class="pagination-btn">Previous</a>
+            {{end}}
+            
+            {{range .PageNumbers}}
+                {{if eq . $.CurrentPage}}
+                    <span class="pagination-btn current">{{.}}</span>
+                {{else}}
+                    <a href="?{{$.PaginationQuery}}&page={{.}}" class="pagination-btn">{{.}}</a>
+                {{end}}
+            {{end}}
+            
+            {{if lt .CurrentPage .TotalPages}}
+                <a href="?{{.PaginationQuery}}&page={{.NextPage}}" class="pagination-btn">Next</a>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+
+    <script src="/static/main.js"></script>
+    <script>
+        function toggleFilter(filterType) {
+            console.log('Toggle filter:', filterType);
+            // Filter functionality will be implemented later
+        }
+
+        function toggleWishlist(propertyId) {
+            console.log('Toggle wishlist for property:', propertyId);
+            // Wishlist functionality will be implemented later
+        }
+    </script>
+</body>
+</html>

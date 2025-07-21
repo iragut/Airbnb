@@ -4,7 +4,9 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/sessions"
 )
@@ -185,6 +187,111 @@ func explore_handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func buildPaginationQuery(values url.Values) string {
+	// Remove page parameter and build query string for pagination
+	newValues := url.Values{}
+	for key, vals := range values {
+		if key != "page" {
+			for _, val := range vals {
+				if val != "" {
+					newValues.Add(key, val)
+				}
+			}
+		}
+	}
+	return newValues.Encode()
+}
+
+func listings_handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse search parameters
+	params := SearchParams{
+		Destination:  strings.TrimSpace(r.URL.Query().Get("destination")),
+		CheckIn:      r.URL.Query().Get("checkin"),
+		CheckOut:     r.URL.Query().Get("checkout"),
+		Guests:       r.URL.Query().Get("guests"),
+		PropertyType: r.URL.Query().Get("type"),
+		Page:         1,
+		Limit:        20,
+	}
+
+	// Parse page number
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if page, err := strconv.Atoi(pageStr); err == nil && page > 0 {
+			params.Page = page
+		}
+	}
+
+	// Parse price filters
+	if minPriceStr := r.URL.Query().Get("min_price"); minPriceStr != "" {
+		if minPrice, err := strconv.ParseFloat(minPriceStr, 64); err == nil && minPrice >= 0 {
+			params.MinPrice = minPrice
+		}
+	}
+
+	if maxPriceStr := r.URL.Query().Get("max_price"); maxPriceStr != "" {
+		if maxPrice, err := strconv.ParseFloat(maxPriceStr, 64); err == nil && maxPrice > 0 {
+			params.MaxPrice = maxPrice
+		}
+	}
+
+	// Search listings
+	result, err := search_listings(params)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Println("Error searching listings:", err)
+		return
+	}
+
+	// Prepare pagination data
+	pageNumbers := make([]int, 0)
+	start := max(1, params.Page-2)
+	end := min(result.TotalPages, params.Page+2)
+
+	for i := start; i <= end; i++ {
+		pageNumbers = append(pageNumbers, i)
+	}
+
+	// Build pagination query string (without page parameter)
+	paginationQuery := buildPaginationQuery(r.URL.Query())
+
+	// Prepare template data
+	templateData := struct {
+		Listings        []Listing
+		SearchParams    SearchParams
+		SearchQuery     string
+		TotalResults    int
+		TotalPages      int
+		CurrentPage     int
+		NextPage        int
+		PrevPage        int
+		PageNumbers     []int
+		PaginationQuery string
+	}{
+		Listings:        result.Listings,
+		SearchParams:    params,
+		SearchQuery:     params.Destination,
+		TotalResults:    result.TotalResults,
+		TotalPages:      result.TotalPages,
+		CurrentPage:     result.CurrentPage,
+		NextPage:        result.CurrentPage + 1,
+		PrevPage:        result.CurrentPage - 1,
+		PageNumbers:     pageNumbers,
+		PaginationQuery: paginationQuery,
+	}
+
+	tmpl := template.Must(template.ParseFiles("template/listings_page.html"))
+	err = tmpl.Execute(w, templateData)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Println("Error executing template:", err)
+	}
+}
+
 func main() {
 	fs := http.FileServer(http.Dir("static/"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
@@ -195,6 +302,7 @@ func main() {
 
 	http.HandleFunc("/register", register_handler)
 	http.HandleFunc("/explore", explore_handler)
+	http.HandleFunc("/listings", listings_handler)
 
 	http.HandleFunc("/users/", user_profile_handler)
 	http.HandleFunc("/my-profile", my_profile_handler)
