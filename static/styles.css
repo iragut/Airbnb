@@ -1048,3 +1048,498 @@ body {
         flex-wrap: wrap;
     }
 }
+
+
+.property-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    background-color: white;
+    min-height: calc(100vh - 90px);
+}
+
+.property-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+}
+
+.property-title h1 {
+    font-size: 26px;
+    font-weight: 600;
+    color: #222222;
+    margin: 0 0 8px 0;
+    line-height: 1.2;
+}
+
+.property-location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #717171;
+    font-size: 14px;
+}
+
+.property-location svg {
+    flex-shrink: 0;
+}
+
+.property-actions {
+    display: flex;
+    gap: 16px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #222222;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    text-decoration: underline;
+}
+
+.action-btn:hover {
+    background-color: #f7f7f7;
+}
+
+.property-images {
+    margin-bottom: 48px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.main-image {
+    width: 100%;
+    height: 400px;
+    position: relative;
+}
+
+.main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.main-image-placeholder {
+    width: 100%;
+    height: 400px;
+    background: #f7f7f7;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #717171;
+    border: 2px dashed #ddd;
+}
+
+.main-image-placeholder p {
+    margin: 16px 0 0 0;
+    font-size: 16px;
+}
+
+
+.property-content {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 80px;
+}
+
+.property-main {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+}
+
+
+.host-info h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #222222;
+    margin: 0 0 8px 0;
+    text-transform: capitalize;
+}
+
+.property-stats {
+    color: #717171;
+    font-size: 16px;
+}
+
+
+.property-features {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 32px 0;
+    border-top: 1px solid #dddddd;
+    border-bottom: 1px solid #dddddd;
+}
+
+.feature {
+    display: flex;
+    gap: 16px;
+}
+
+.feature-icon {
+    font-size: 24px;
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.feature-content h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #222222;
+    margin: 0 0 4px 0;
+}
+
+.feature-content p {
+    font-size: 14px;
+    color: #717171;
+    margin: 0;
+    line-height: 1.4;
+}
+
+
+.property-description {
+    padding: 32px 0;
+    border-bottom: 1px solid #dddddd;
+}
+
+.property-description h3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #222222;
+    margin: 0 0 16px 0;
+}
+
+.property-description p {
+    font-size: 16px;
+    color: #222222;
+    line-height: 1.5;
+    margin: 0;
+}
+
+
+.property-amenities {
+    padding: 32px 0;
+    border-bottom: 1px solid #dddddd;
+}
+
+.property-amenities h3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #222222;
+    margin: 0 0 24px 0;
+}
+
+.amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.amenity-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 16px;
+    color: #222222;
+}
+
+.amenity-icon {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+
+.property-reviews {
+    padding: 32px 0;
+}
+
+.property-reviews h3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #222222;
+    margin: 0 0 24px 0;
+}
+
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+}
+
+.review-item {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.review-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.reviewer-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #ff5a5f, #e00007);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.reviewer-info h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #222222;
+    margin: 0 0 4px 0;
+}
+
+.review-date {
+    font-size: 14px;
+    color: #717171;
+}
+
+.review-rating {
+    margin-left: auto;
+    color: #ffd700;
+    font-size: 14px;
+}
+
+.review-comment {
+    font-size: 16px;
+    color: #222222;
+    line-height: 1.5;
+    margin: 0;
+}
+
+
+.booking-card {
+    background: white;
+    border: 1px solid #dddddd;
+    border-radius: 12px;
+    padding: 24px;
+    height: fit-content;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    position: sticky;
+    top: 80px;
+}
+
+.booking-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.booking-price .price {
+    font-size: 22px;
+    font-weight: 600;
+    color: #222222;
+}
+
+.booking-price .per-night {
+    font-size: 16px;
+    color: #717171;
+}
+
+.booking-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.booking-dates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.date-field {
+    padding: 12px;
+    border-right: 1px solid #dddddd;
+    display: flex;
+    flex-direction: column;
+}
+
+.date-field:last-child {
+    border-right: none;
+}
+
+.date-field label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #222222;
+    margin-bottom: 4px;
+}
+
+.date-field input {
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #717171;
+    background: transparent;
+}
+
+.booking-guests {
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.booking-guests label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #222222;
+    margin-bottom: 4px;
+}
+
+.booking-guests select {
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #717171;
+    background: transparent;
+}
+
+.btn-book {
+    background: linear-gradient(to right, #e61e4d 0%, #e31c5f 50%, #d70466 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.btn-book:hover {
+    transform: translateY(-1px);
+}
+
+.btn-book:active {
+    transform: translateY(0);
+}
+
+.booking-note {
+    text-align: center;
+    font-size: 14px;
+    color: #717171;
+    margin: 8px 0 24px 0;
+}
+
+.booking-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    color: #222222;
+}
+
+.breakdown-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    color: #222222;
+    padding-top: 16px;
+}
+
+.booking-breakdown hr {
+    border: none;
+    border-top: 1px solid #dddddd;
+    margin: 8px 0;
+}
+
+@media (max-width: 1128px) {
+    .property-container {
+        max-width: 100%;
+        padding: 24px 20px;
+    }
+    
+    .property-content {
+        grid-template-columns: 1fr;
+        gap: 48px;
+    }
+    
+    .booking-card {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .property-header {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .property-actions {
+        align-self: flex-start;
+    }
+    
+    .property-content {
+        gap: 32px;
+    }
+    
+    .amenities-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .reviews-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+    
+    .booking-dates {
+        grid-template-columns: 1fr;
+    }
+    
+    .date-field {
+        border-right: none;
+        border-bottom: 1px solid #dddddd;
+    }
+    
+    .date-field:last-child {
+        border-bottom: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .property-container {
+        padding: 20px 16px;
+    }
+    
+    .main-image {
+        height: 280px;
+    }
+    
+    .main-image-placeholder {
+        height: 280px;
+    }
+}

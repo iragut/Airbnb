@@ -292,6 +292,83 @@ func listings_handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func property_detail_handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract property ID from URL path
+	path := strings.TrimPrefix(r.URL.Path, "/property/")
+	if path == "" {
+		http.Error(w, "Property ID is required", http.StatusBadRequest)
+		return
+	}
+
+	propertyID, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid property ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get property details
+	propertyDetail, err := get_property_detail(propertyID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Println("Error fetching property detail:", err)
+		return
+	}
+
+	if propertyDetail == nil || propertyDetail.Property == nil {
+		http.Error(w, "Property not found", http.StatusNotFound)
+		return
+	}
+
+	// Check if user is authenticated
+	isAuthenticated, _ := is_authenticated(r)
+
+	// Create template functions
+	funcMap := template.FuncMap{
+		"title": strings.Title,
+		"iterate": func(count int) []int {
+			var result []int
+			for i := 0; i < count; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
+		"mul": func(a, b float64) float64 {
+			return a * b
+		},
+		"add": func(a, b, c float64) float64 {
+			return a + b + c
+		},
+	}
+
+	// Prepare template data
+	templateData := struct {
+		Property        *Listing
+		Host            *UserData
+		Amenities       *PropertyAmenities
+		Reviews         []Review
+		IsAuthenticated bool
+	}{
+		Property:        propertyDetail.Property,
+		Host:            propertyDetail.Host,
+		Amenities:       propertyDetail.Amenities,
+		Reviews:         propertyDetail.Reviews,
+		IsAuthenticated: isAuthenticated,
+	}
+
+	// Parse and execute template
+	tmpl := template.Must(template.New("property_detail.html").Funcs(funcMap).ParseFiles("template/property_detail.html"))
+	err = tmpl.Execute(w, templateData)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Println("Error executing template:", err)
+	}
+}
+
 func main() {
 	fs := http.FileServer(http.Dir("static/"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
@@ -306,6 +383,8 @@ func main() {
 
 	http.HandleFunc("/users/", user_profile_handler)
 	http.HandleFunc("/my-profile", my_profile_handler)
+
+	http.HandleFunc("/property/", property_detail_handler)
 
 	log.Println("Server starting on :8080")
 

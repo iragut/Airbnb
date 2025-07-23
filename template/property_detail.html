@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.Property.Title}} - {{.Property.City}}, {{.Property.Country}} - AirBnB Clone</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo">AirBnBClone</a>
+        
+        <div class="auth-buttons">
+            {{if .IsAuthenticated}}
+                <a href="/my-profile" class="btn btn-login">My Profile</a>
+                <a href="/logout" class="btn btn-signup">Logout</a>
+            {{else}}
+                <a href="/login" class="btn btn-login">Login</a>
+                <a href="/register" class="btn btn-signup">Sign Up</a>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="property-container">
+        <!-- Property Header -->
+        <div class="property-header">
+            <div class="property-title">
+                <h1>{{.Property.Title}}</h1>
+                <div class="property-location">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 0C5.2 0 3 2.2 3 5c0 3.5 5 11 5 11s5-7.5 5-11c0-2.8-2.2-5-5-5zm0 7.5c-1.4 0-2.5-1.1-2.5-2.5S6.6 2.5 8 2.5s2.5 1.1 2.5 2.5S9.4 7.5 8 7.5z"/>
+                    </svg>
+                    <span>{{.Property.Address}}, {{.Property.City}}, {{.Property.Country}}</span>
+                </div>
+            </div>
+            
+            <div class="property-actions">
+                <button class="action-btn" onclick="shareProperty()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
+                    </svg>
+                    Share
+                </button>
+                <button class="action-btn" onclick="toggleWishlist('{{.Property.ID}}')">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    Save
+                </button>
+            </div>
+        </div>
+
+        <!-- Property Images -->
+        <div class="property-images">
+            {{if .Property.ImageURL}}
+                <div class="main-image">
+                    <img src="{{.Property.ImageURL}}" alt="{{.Property.Title}}">
+                </div>
+            {{else}}
+                <div class="main-image-placeholder">
+                    <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+                        <path d="M80 24H16c-4.42 0-8 3.58-8 8v32c0 4.42 3.58 8 8 8h64c4.42 0 8-3.58 8-8V32c0-4.42-3.58-8-8-8zM16 32h64v32H16V32zm16 24l10-12 10 12 14-16 14 16H32z" fill="#ccc"/>
+                    </svg>
+                    <p>No image available</p>
+                </div>
+            {{end}}
+        </div>
+
+        <div class="property-content">
+            <!-- Main Info -->
+            <div class="property-main">
+                <div class="property-info">
+                    <div class="host-info">
+                        <h2>{{.Property.Type | title}} hosted by {{.Host.Username}}</h2>
+                        <div class="property-stats">
+                            <span>2 guests</span> • 
+                            <span>1 bedroom</span> • 
+                            <span>1 bed</span> • 
+                            <span>1 bathroom</span>
+                        </div>
+                    </div>
+
+                    <div class="property-features">
+                        <div class="feature">
+                            <div class="feature-icon">🏠</div>
+                            <div class="feature-content">
+                                <h4>Entire {{.Property.Type}}</h4>
+                                <p>You'll have the entire place to yourself.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature">
+                            <div class="feature-icon">✨</div>
+                            <div class="feature-content">
+                                <h4>Enhanced Clean</h4>
+                                <p>This host committed to enhanced cleaning process.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature">
+                            <div class="feature-icon">📍</div>
+                            <div class="feature-content">
+                                <h4>Great location</h4>
+                                <p>Perfect location in {{.Property.City}} city center.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="property-description">
+                        <h3>About this place</h3>
+                        <p>{{.Property.Description}}</p>
+                    </div>
+
+                    <!-- Amenities -->
+                    <div class="property-amenities">
+                        <h3>What this place offers</h3>
+                        <div class="amenities-grid">
+                            {{if .Amenities.Wifi}}<div class="amenity-item"><span class="amenity-icon">📶</span> Wifi</div>{{end}}
+                            {{if .Amenities.Kitchen}}<div class="amenity-item"><span class="amenity-icon">🍳</span> Kitchen</div>{{end}}
+                            {{if .Amenities.AirConditioning}}<div class="amenity-item"><span class="amenity-icon">❄️</span> Air conditioning</div>{{end}}
+                            {{if .Amenities.Parking}}<div class="amenity-item"><span class="amenity-icon">🚗</span> Free parking</div>{{end}}
+                            {{if .Amenities.Pool}}<div class="amenity-item"><span class="amenity-icon">🏊</span> Pool</div>{{end}}
+                            {{if .Amenities.TV}}<div class="amenity-item"><span class="amenity-icon">📺</span> TV</div>{{end}}
+                            {{if .Amenities.Washer}}<div class="amenity-item"><span class="amenity-icon">👕</span> Washer</div>{{end}}
+                            {{if .Amenities.Dryer}}<div class="amenity-item"><span class="amenity-icon">🌀</span> Dryer</div>{{end}}
+                            {{if .Amenities.Heating}}<div class="amenity-item"><span class="amenity-icon">🔥</span> Heating</div>{{end}}
+                            {{if .Amenities.Balcony}}<div class="amenity-item"><span class="amenity-icon">🌿</span> Balcony</div>{{end}}
+                            {{if .Amenities.PetsAllowed}}<div class="amenity-item"><span class="amenity-icon">🐕</span> Pets allowed</div>{{end}}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reviews -->
+                {{if .Reviews}}
+                <div class="property-reviews">
+                    <h3>{{len .Reviews}} reviews</h3>
+                    <div class="reviews-grid">
+                        {{range .Reviews}}
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div class="reviewer-avatar">{{slice .Username 0 1}}</div>
+                                <div class="reviewer-info">
+                                    <h4>{{.Username}}</h4>
+                                    <div class="review-date">{{.CreatedAt}}</div>
+                                </div>
+                                <div class="review-rating">
+                                    {{range $i := iterate .Rating}}⭐{{end}}
+                                </div>
+                            </div>
+                            <p class="review-comment">{{.Comment}}</p>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Booking Card -->
+            <div class="booking-card">
+                <div class="booking-price">
+                    <span class="price">${{printf "%.0f" .Property.Price}}</span>
+                    <span class="per-night">per night</span>
+                </div>
+
+                <form class="booking-form" action="/book" method="POST">
+                    <input type="hidden" name="property_id" value="{{.Property.ID}}">
+                    
+                    <div class="booking-dates">
+                        <div class="date-field">
+                            <label>CHECK-IN</label>
+                            <input type="date" name="checkin" required>
+                        </div>
+                        <div class="date-field">
+                            <label>CHECKOUT</label>
+                            <input type="date" name="checkout" required>
+                        </div>
+                    </div>
+
+                    <div class="booking-guests">
+                        <label>GUESTS</label>
+                        <select name="guests" required>
+                            <option value="1">1 guest</option>
+                            <option value="2">2 guests</option>
+                            <option value="3">3 guests</option>
+                            <option value="4">4 guests</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-book">Reserve</button>
+                    <p class="booking-note">You won't be charged yet</p>
+
+                    <div class="booking-breakdown">
+                        <div class="breakdown-item">
+                            <span>${{printf "%.0f" .Property.Price}} x 5 nights</span>
+                            <span>${{printf "%.0f" (mul .Property.Price 5)}}</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Cleaning fee</span>
+                            <span>$50</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Service fee</span>
+                            <span>${{printf "%.0f" (mul .Property.Price 0.1)}}</span>
+                        </div>
+                        <hr>
+                        <div class="breakdown-total">
+                            <span><strong>Total</strong></span>
+                            <span><strong>${{printf "%.0f" (add (mul .Property.Price 5) 50 (mul .Property.Price 0.1))}}</strong></span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/main.js"></script>
+    <script>
+        function shareProperty() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '{{.Property.Title}}',
+                    text: 'Check out this amazing property!',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Link copied to clipboard!');
+            }
+        }
+
+        function toggleWishlist(propertyId) {
+            console.log('Toggle wishlist for property:', propertyId);
+            // Will implement later
+        }
+
+        // Set minimum dates to today
+        const today = new Date().toISOString().split('T')[0];
+        document.querySelector('input[name="checkin"]').min = today;
+        document.querySelector('input[name="checkout"]').min = today;
+
+        // Update checkout minimum when checkin changes
+        document.querySelector('input[name="checkin"]').addEventListener('change', function() {
+            document.querySelector('input[name="checkout"]').min = this.value;
+        });
+    </script>
+</body>
+</html>

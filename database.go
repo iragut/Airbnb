@@ -63,6 +63,123 @@ type ListingsResult struct {
 	CurrentPage  int
 }
 
+type PropertyAmenities struct {
+	PostID          int
+	Wifi            bool
+	AirConditioning bool
+	Kitchen         bool
+	Parking         bool
+	PetsAllowed     bool
+	Pool            bool
+	Washer          bool
+	Dryer           bool
+	TV              bool
+	Heating         bool
+	Balcony         bool
+}
+
+type Review struct {
+	ID        int
+	PostID    int
+	UserID    int
+	Username  string
+	Rating    int
+	Comment   string
+	CreatedAt string
+}
+
+type PropertyDetail struct {
+	Property  *Listing
+	Host      *UserData
+	Amenities *PropertyAmenities
+	Reviews   []Review
+}
+
+func create_amenities(post_id int, wifi, ac, kitchen, parking, pets, pool, washer, dryer, tv, heating, balcony bool) {
+	query := `INSERT INTO Amenities (post_id, wifi, air_conditioning, kitchen, parking, pets_allowed, pool, washer, dryer, tv, heating, balcony) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+	_, err := db.Exec(query, post_id, wifi, ac, kitchen, parking, pets, pool, washer, dryer, tv, heating, balcony)
+	if err != nil {
+		log.Printf("Error creating amenities: %v", err)
+	}
+}
+
+// Create a review
+func create_review(post_id, user_id, rating int, comment string) {
+	query := `INSERT INTO Reviews (post_id, user_id, rating, comment) VALUES (?, ?, ?, ?)`
+
+	_, err := db.Exec(query, post_id, user_id, rating, comment)
+	if err != nil {
+		log.Printf("Error creating review: %v", err)
+	}
+}
+
+// Get property details with amenities and reviews
+func get_property_detail(propertyID int) (*PropertyDetail, error) {
+	// Get basic property info
+	property, err := get_listing_by_id(propertyID)
+	if err != nil || property == nil {
+		return nil, err
+	}
+
+	// Get host information
+	host := get_user_data(property.UserID)
+	if host == nil {
+		host = &UserData{Username: "Unknown Host"}
+	}
+
+	// Get amenities
+	amenitiesQuery := `
+		SELECT wifi, air_conditioning, kitchen, parking, pets_allowed, pool, washer, dryer, tv, heating, balcony
+		FROM Amenities WHERE post_id = ?`
+
+	var amenities PropertyAmenities
+	err = db.QueryRow(amenitiesQuery, propertyID).Scan(
+		&amenities.Wifi, &amenities.AirConditioning, &amenities.Kitchen, &amenities.Parking,
+		&amenities.PetsAllowed, &amenities.Pool, &amenities.Washer, &amenities.Dryer,
+		&amenities.TV, &amenities.Heating, &amenities.Balcony,
+	)
+
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Error fetching amenities: %v", err)
+	}
+
+	// Get reviews
+	reviewsQuery := `
+		SELECT r.id, r.post_id, r.user_id, u.username, r.rating, r.comment, r.created_at
+		FROM Reviews r
+		JOIN Users u ON r.user_id = u.id
+		WHERE r.post_id = ?
+		ORDER BY r.created_at DESC`
+
+	rows, err := db.Query(reviewsQuery, propertyID)
+	if err != nil {
+		log.Printf("Error fetching reviews: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reviews []Review
+	for rows.Next() {
+		var review Review
+		err := rows.Scan(&review.ID, &review.PostID, &review.UserID, &review.Username,
+			&review.Rating, &review.Comment, &review.CreatedAt)
+		if err != nil {
+			log.Printf("Error scanning review: %v", err)
+			continue
+		}
+		reviews = append(reviews, review)
+	}
+
+	return &PropertyDetail{
+		Property:  property,
+		Host:      host,
+		Amenities: &amenities,
+		Reviews:   reviews,
+	}, nil
+}
+
 func search_listings(params SearchParams) (*ListingsResult, error) {
 	var listings []Listing
 	var totalCount int
@@ -169,6 +286,42 @@ func search_listings(params SearchParams) (*ListingsResult, error) {
 	}, nil
 }
 
+func get_listing_by_id(listingID int) (*Listing, error) {
+	query := `
+		SELECT p.id, p.user_id, p.title, p.country, p.city, p.address,
+		       p.description, p.price, p.type, p.created_at,
+		       COALESCE(MIN(i.image_url), '') as image_url,
+		       COALESCE(MAX(a.wifi), false) as has_wifi,
+		       COALESCE(MAX(a.kitchen), false) as has_kitchen,
+		       COALESCE(MAX(a.air_conditioning), false) as has_ac,
+		       COALESCE(MAX(a.parking), false) as has_parking
+		FROM Posts p
+		LEFT JOIN Images i ON p.id = i.post_id
+		LEFT JOIN Amenities a ON p.id = a.post_id
+		WHERE p.id = ?
+		GROUP BY p.id, p.user_id, p.title, p.country, p.city, p.address, p.description, p.price, p.type, p.created_at
+		LIMIT 1`
+
+	var listing Listing
+	err := db.QueryRow(query, listingID).Scan(
+		&listing.ID, &listing.UserID, &listing.Title, &listing.Country,
+		&listing.City, &listing.Address, &listing.Description,
+		&listing.Price, &listing.Type, &listing.CreatedAt,
+		&listing.ImageURL, &listing.HasWifi, &listing.HasKitchen,
+		&listing.HasAC, &listing.HasParking,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		log.Printf("Error querying listing by ID: %v", err)
+		return nil, err
+	}
+
+	return &listing, nil
+}
+
 // Extract number of posts in a city
 func get_post_count_by_city(city string) int {
 	query := `SELECT COUNT(*) FROM Posts WHERE city = ?`
@@ -258,18 +411,49 @@ func create_post(user_id int, title string, country string, city string, address
 	log.Println("Post created successfully")
 }
 
-// Updated test data creation with all required fields
 func create_posts_test_data() {
-	create_post(1, "Cozy Apartment", "USA", "New York", "123 Broadway St", "A cozy apartment in the city center.", 100.0, "apartment")
-	create_post(1, "Luxury Loft", "Indonesia", "Bali", "456 Beach Road", "A luxury loft with ocean views.", 150.0, "apartment")
-	create_post(1, "Beach House", "Spain", "Barcelona", "789 Coastal Ave", "A beautiful beach house with ocean view.", 250.0, "house")
-	create_post(1, "Mountain Cabin", "Japan", "Tokyo", "321 Mountain Path", "A rustic cabin in the mountains.", 200.0, "house")
-	create_post(1, "Luxury Villa", "France", "Paris", "654 Champs Elysees", "A luxury villa with private pool.", 500.0, "house")
-	create_post(1, "City Loft", "UK", "London", "987 Thames St", "A modern loft in the heart of the city.", 300.0, "apartment")
-	create_post(1, "Countryside Cottage", "Italy", "Rome", "147 Villa Road", "A charming cottage in the countryside.", 180.0, "house")
-	create_post(1, "Penthouse Suite", "UAE", "Dubai", "258 Burj St", "A penthouse suite with stunning views.", 400.0, "apartment")
-	create_post(1, "Historic Mansion", "France", "Paris", "369 Historic Blvd", "A historic mansion with rich history.", 600.0, "house")
-	log.Println("Test posts created successfully")
+	create_post(1, "Cozy Apartment", "USA", "New York", "123 Broadway St", "A cozy apartment in the city center with modern amenities and great city views.", 100.0, "apartment")
+	create_amenities(1, true, true, true, false, false, false, true, true, true, true, false)
+	create_review(1, 1, 5, "Amazing apartment! Perfect location and very clean. The host was super responsive and helpful.")
+	create_review(1, 1, 4, "Great place to stay in NYC. Kitchen was well-equipped and the bed was comfortable. Would recommend!")
+
+	create_post(1, "Luxury Loft", "Indonesia", "Bali", "456 Beach Road", "A luxury loft with stunning ocean views, private balcony, and modern tropical design.", 150.0, "apartment")
+	create_amenities(2, true, true, true, true, false, true, true, false, true, false, true)
+	create_review(2, 1, 5, "Absolutely stunning! The ocean view is breathtaking and the loft is beautifully designed. Perfect for a romantic getaway.")
+	create_review(2, 1, 5, "Best vacation rental we've ever stayed at. The pool area is amazing and the location is unbeatable.")
+
+	create_post(1, "Beach House", "Spain", "Barcelona", "789 Coastal Ave", "A beautiful beach house with direct ocean access, perfect for families and groups.", 250.0, "house")
+	create_amenities(3, true, false, true, true, true, false, true, true, true, false, true)
+	create_review(3, 1, 4, "Perfect family vacation spot! Kids loved being so close to the beach. House has everything you need.")
+
+	create_post(1, "Mountain Retreat", "Japan", "Tokyo", "321 Mountain Path", "A unique mountain retreat just outside Tokyo, offering peace and tranquility with city access.", 200.0, "house")
+	create_amenities(4, true, false, true, true, false, false, false, false, true, true, false)
+	create_review(4, 1, 5, "What a unique find! Perfect escape from the city while still being accessible. Very peaceful and well-maintained.")
+	create_review(4, 1, 4, "Great for a digital detox. Beautiful surroundings and the host provided excellent local recommendations.")
+
+	create_post(1, "Luxury Villa", "France", "Paris", "654 Champs Elysees", "An elegant Parisian villa with private pool, garden, and classic French architecture.", 500.0, "house")
+	create_amenities(5, true, true, true, true, false, true, true, true, true, true, true)
+	create_review(5, 1, 5, "Pure luxury! Felt like staying in a high-end hotel. The pool and garden are magnificent. Worth every euro!")
+
+	create_post(1, "Modern City Loft", "UK", "London", "987 Thames St", "A sleek modern loft in the heart of London with industrial design and city views.", 300.0, "apartment")
+	create_amenities(6, true, true, true, false, false, false, true, true, true, true, false)
+	create_review(6, 1, 4, "Fantastic location and beautiful modern design. Walking distance to all major attractions. Highly recommend!")
+	create_review(6, 1, 5, "Stylish and comfortable. The loft has a great vibe and the host was incredibly welcoming.")
+
+	create_post(1, "Tuscan-Style Cottage", "Italy", "Rome", "147 Villa Road", "A charming cottage with authentic Italian character, beautiful gardens, and peaceful countryside views.", 180.0, "house")
+	create_amenities(7, true, false, true, true, true, false, false, false, true, true, true)
+	create_review(7, 1, 5, "Like staying in a fairytale! The cottage is beautifully decorated and the garden is perfect for morning coffee.")
+
+	create_post(1, "Sky-High Penthouse", "UAE", "Dubai", "258 Burj St", "A luxurious penthouse suite with panoramic city views, premium amenities, and world-class service.", 400.0, "apartment")
+	create_amenities(8, true, true, true, true, false, true, true, true, true, true, true)
+	create_review(8, 1, 5, "Absolutely incredible! The views are out of this world. Felt like a VIP the entire stay. Perfect for special occasions.")
+	create_review(8, 1, 4, "Stunning apartment with amazing amenities. The infinity pool on the rooftop is unforgettable.")
+
+	create_post(1, "Historic Mansion", "France", "Paris", "369 Historic Blvd", "A beautifully restored 18th-century mansion with original details, elegant furnishings, and rich history.", 600.0, "house")
+	create_amenities(9, true, true, true, true, false, false, true, true, true, true, true)
+	create_review(9, 1, 5, "Staying here is like living in a museum! Incredible history and the restoration is flawless. A truly unique experience.")
+
+	log.Println("Created test posts and amenities successfully")
 }
 
 func connect_to_database() *sql.DB {
