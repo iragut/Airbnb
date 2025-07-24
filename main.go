@@ -17,6 +17,30 @@ var (
 	store = sessions.NewCookieStore(key)
 )
 
+// AuthContext holds authentication information for templates
+type AuthContext struct {
+	IsAuthenticated bool
+	UserID          int
+	Username        string
+}
+
+func get_auth(r *http.Request) AuthContext {
+	authenticated, userID := is_authenticated(r)
+	var username string
+
+	if authenticated {
+		if userData := get_user_data(userID); userData != nil {
+			username = userData.Username
+		}
+	}
+
+	return AuthContext{
+		IsAuthenticated: authenticated,
+		UserID:          userID,
+		Username:        username,
+	}
+}
+
 func is_authenticated(r *http.Request) (bool, int) {
 	session, _ := store.Get(r, "cookie-name")
 
@@ -39,8 +63,16 @@ func main_page_handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authCtx := get_auth(r)
+
+	templateData := struct {
+		Auth AuthContext
+	}{
+		Auth: authCtx,
+	}
+
 	tmpl := template.Must(template.ParseFiles("template/main_page.html"))
-	err := tmpl.Execute(w, nil)
+	err := tmpl.Execute(w, templateData)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		log.Println("Error executing template:", err)
@@ -50,8 +82,22 @@ func main_page_handler(w http.ResponseWriter, r *http.Request) {
 func login_handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
+		authCtx := get_auth(r)
+
+		// If already logged in, redirect to profile
+		if authCtx.IsAuthenticated {
+			http.Redirect(w, r, "/my-profile", http.StatusSeeOther)
+			return
+		}
+
+		templateData := struct {
+			Auth AuthContext
+		}{
+			Auth: authCtx,
+		}
+
 		tmpl := template.Must(template.ParseFiles("template/login_page.html"))
-		err := tmpl.Execute(w, nil)
+		err := tmpl.Execute(w, templateData)
 		if err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			log.Println("Error executing template:", err)
@@ -117,8 +163,22 @@ func logout_handler(w http.ResponseWriter, r *http.Request) {
 func register_handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
+		authCtx := get_auth(r)
+
+		// If already logged in, redirect to profile
+		if authCtx.IsAuthenticated {
+			http.Redirect(w, r, "/my-profile", http.StatusSeeOther)
+			return
+		}
+
+		templateData := struct {
+			Auth AuthContext
+		}{
+			Auth: authCtx,
+		}
+
 		tmpl := template.Must(template.ParseFiles("template/register_page.html"))
-		err := tmpl.Execute(w, nil)
+		err := tmpl.Execute(w, templateData)
 		if err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			log.Println("Error executing template:", err)
@@ -126,20 +186,38 @@ func register_handler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		email := r.FormValue("email")
 		password := r.FormValue("password")
-		tel_number := r.FormValue("phone_number")
-		create_user(email, password, "New User", tel_number, "user")
+		confirm_password := r.FormValue("confirm_password")
+		country_code := r.FormValue("country_code")
+		number := r.FormValue("number")
+
+		// Basic validation
+		if email == "" || password == "" || number == "" {
+			http.Error(w, "All fields are required", http.StatusBadRequest)
+			return
+		}
+
+		if password != confirm_password {
+			http.Error(w, "Passwords do not match", http.StatusBadRequest)
+			return
+		}
+
+		// Combine country code and number
+		phone_number := country_code + number
+
+		create_user(email, password, "New User", phone_number, "user")
 		log.Println("User registered:", email)
 
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
-
 }
 
 func explore_handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
+		authCtx := get_auth(r)
+
 		// Get post counts for each city
 		number_of_posts_city := make(map[string]int)
 
@@ -154,8 +232,10 @@ func explore_handler(w http.ResponseWriter, r *http.Request) {
 
 		template_data := struct {
 			CityAndPosts map[string]int
+			Auth         AuthContext
 		}{
 			CityAndPosts: number_of_posts_city,
+			Auth:         authCtx,
 		}
 
 		tmpl := template.Must(template.ParseFiles("template/explore_page.html"))
@@ -207,6 +287,8 @@ func listings_handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	authCtx := get_auth(r)
 
 	// Parse search parameters
 	params := SearchParams{
@@ -271,6 +353,7 @@ func listings_handler(w http.ResponseWriter, r *http.Request) {
 		PrevPage        int
 		PageNumbers     []int
 		PaginationQuery string
+		Auth            AuthContext
 	}{
 		Listings:        result.Listings,
 		SearchParams:    params,
@@ -282,6 +365,7 @@ func listings_handler(w http.ResponseWriter, r *http.Request) {
 		PrevPage:        result.CurrentPage - 1,
 		PageNumbers:     pageNumbers,
 		PaginationQuery: paginationQuery,
+		Auth:            authCtx,
 	}
 
 	tmpl := template.Must(template.ParseFiles("template/listings_page.html"))
@@ -297,6 +381,8 @@ func property_detail_handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	authCtx := get_auth(r)
 
 	// Extract property ID from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/property/")
@@ -324,9 +410,6 @@ func property_detail_handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user is authenticated
-	isAuthenticated, _ := is_authenticated(r)
-
 	// Create template functions
 	funcMap := template.FuncMap{
 		"title": strings.Title,
@@ -347,17 +430,17 @@ func property_detail_handler(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare template data
 	templateData := struct {
-		Property        *Listing
-		Host            *UserData
-		Amenities       *PropertyAmenities
-		Reviews         []Review
-		IsAuthenticated bool
+		Property  *Listing
+		Host      *UserData
+		Amenities *PropertyAmenities
+		Reviews   []Review
+		Auth      AuthContext
 	}{
-		Property:        propertyDetail.Property,
-		Host:            propertyDetail.Host,
-		Amenities:       propertyDetail.Amenities,
-		Reviews:         propertyDetail.Reviews,
-		IsAuthenticated: isAuthenticated,
+		Property:  propertyDetail.Property,
+		Host:      propertyDetail.Host,
+		Amenities: propertyDetail.Amenities,
+		Reviews:   propertyDetail.Reviews,
+		Auth:      authCtx,
 	}
 
 	// Parse and execute template

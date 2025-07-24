@@ -10,7 +10,7 @@
         <a href="/" class="logo">AirBnBClone</a>
         
         <div class="auth-buttons">
-            {{if .IsAuthenticated}}
+            {{if .Auth.IsAuthenticated}}
                 <a href="/my-profile" class="btn btn-login">My Profile</a>
                 <a href="/logout" class="btn btn-signup">Logout</a>
             {{else}}
@@ -167,11 +167,11 @@
                     <div class="booking-dates">
                         <div class="date-field">
                             <label>CHECK-IN</label>
-                            <input type="date" name="checkin" required>
+                            <input type="date" name="checkin" id="booking-checkin" required>
                         </div>
                         <div class="date-field">
                             <label>CHECKOUT</label>
-                            <input type="date" name="checkout" required>
+                            <input type="date" name="checkout" id="booking-checkout" required>
                         </div>
                     </div>
 
@@ -182,31 +182,25 @@
                             <option value="2">2 guests</option>
                             <option value="3">3 guests</option>
                             <option value="4">4 guests</option>
+                            <option value="5">5 guests</option>
+                            <option value="6">6 guests</option>
                         </select>
+                    </div>
+
+                    <div class="booking-summary" id="booking-summary" style="display: none;">
+                        <div class="summary-item">
+                            <span id="nights-text">5 nights</span>
+                            <span id="nights-price">${{printf "%.0f" (mul .Property.Price 5)}}</span>
+                        </div>
+                        <hr>
+                        <div class="summary-total">
+                            <span><strong>Total</strong></span>
+                            <span><strong id="total-price">${{printf "%.0f" (mul .Property.Price 5)}}</strong></span>
+                        </div>
                     </div>
 
                     <button type="submit" class="btn-book">Reserve</button>
                     <p class="booking-note">You won't be charged yet</p>
-
-                    <div class="booking-breakdown">
-                        <div class="breakdown-item">
-                            <span>${{printf "%.0f" .Property.Price}} x 5 nights</span>
-                            <span>${{printf "%.0f" (mul .Property.Price 5)}}</span>
-                        </div>
-                        <div class="breakdown-item">
-                            <span>Cleaning fee</span>
-                            <span>$50</span>
-                        </div>
-                        <div class="breakdown-item">
-                            <span>Service fee</span>
-                            <span>${{printf "%.0f" (mul .Property.Price 0.1)}}</span>
-                        </div>
-                        <hr>
-                        <div class="breakdown-total">
-                            <span><strong>Total</strong></span>
-                            <span><strong>${{printf "%.0f" (add (mul .Property.Price 5) 50 (mul .Property.Price 0.1))}}</strong></span>
-                        </div>
-                    </div>
                 </form>
             </div>
         </div>

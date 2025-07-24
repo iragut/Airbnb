@@ -7,9 +7,23 @@ function performSearch() {
     
     console.log('Search:', { destination, checkin, checkout, guests });
     
-    // Here you would typically send the data to your backend
-    // Example: window.location.href = `/search?destination=${destination}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`;
+    let searchURL = '/listings?';
+    const params = new URLSearchParams();
     
+    if (destination && destination.trim() !== '') {
+        params.append('destination', destination.trim());
+    }
+    if (checkin && checkin !== '') {
+        params.append('checkin', checkin);
+    }
+    if (checkout && checkout !== '') {
+        params.append('checkout', checkout);
+    }
+    if (guests && guests.trim() !== '') {
+        params.append('guests', guests.trim());
+    }
+
+    window.location.href = '/listings?' + params.toString();
 }
 
 // Password toggle functionality for login/register pages
@@ -78,5 +92,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (checkoutInput) {
         checkoutInput.min = today;
+    }
+
+    const searchButton = document.querySelector('.search-button');
+    if (searchButton && searchButton.type !== 'submit') {
+        searchButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            performSearch();
+        });
     }
 });

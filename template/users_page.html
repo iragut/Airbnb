@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -62,16 +61,75 @@
             {{end}}
 
             <div class="profile-section">
-                <h2>{{if .IsOwnProfile}}My Listings{{else}}Listings{{end}}</h2>
-                <div class="listings-grid">
-                    <!-- This will be populated with actual listings later -->
+                <h2>
+                    {{if .IsAdmin}}All Listings (Admin View){{else if .IsOwnProfile}}My Listings{{else}}Listings{{end}}
+                </h2>
+                
+                {{if .Listings}}
+                    <div class="listings-grid">
+                        {{range .Listings}}
+                        <div class="listing-card" onclick="window.location.href='/property/{{.ID}}'">
+                            <div class="listing-image">
+                                {{if .ImageURL}}
+                                <img src="{{.ImageURL}}" alt="{{.Title}}" loading="lazy">
+                                {{else}}
+                                <div class="image-placeholder">
+                                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                        <path d="M40 12H8c-2.21 0-4 1.79-4 4v16c0 2.21 1.79 4 4 4h32c2.21 0 4-1.79 4-4V16c0-2.21-1.79-4-4-4zM8 16h32v16H8V16zm8 12l5-6 5 6 7-8 7 8H16z" fill="#ccc"/>
+                                    </svg>
+                                </div>
+                                {{end}}
+                                <button class="wishlist-btn" onclick="event.stopPropagation(); toggleWishlist('{{.ID}}')">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div class="listing-info">
+                                <div class="listing-location">
+                                    <h3>{{.City}}, {{.Country}}</h3>
+                                    <p class="listing-title">{{.Title}}</p>
+                                </div>
+                                
+                                <div class="listing-details">
+                                    <span class="property-type">{{.Type}}</span>
+                                    {{if .HasWifi}}<span class="amenity-tag">WiFi</span>{{end}}
+                                    {{if .HasKitchen}}<span class="amenity-tag">Kitchen</span>{{end}}
+                                    {{if .HasAC}}<span class="amenity-tag">AC</span>{{end}}
+                                    {{if .HasParking}}<span class="amenity-tag">Parking</span>{{end}}
+                                </div>
+                                
+                                <div class="listing-price">
+                                    <span class="price">${{printf "%.0f" .Price}}</span>
+                                    <span class="per-night">per night</span>
+                                </div>
+                                
+                                {{if $.IsAdmin}}
+                                <div class="listing-owner">
+                                    <small>Owner ID: {{.UserID}}</small>
+                                </div>
+                                {{end}}
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+                {{else}}
                     <div class="no-listings">
-                        <p>{{if .IsOwnProfile}}You haven't created any listings yet.{{else}}No listings available.{{end}}</p>
+                        <p>
+                            {{if .IsAdmin}}
+                                No listings found in the system.
+                            {{else if .IsOwnProfile}}
+                                You haven't created any listings yet.
+                            {{else}}
+                                No listings available.
+                            {{end}}
+                        </p>
                         {{if .IsOwnProfile}}
                             <button class="btn btn-create">Create Your First Listing</button>
                         {{end}}
                     </div>
-                </div>
+                {{end}}
             </div>
 
             {{if .IsOwnProfile}}
@@ -84,5 +142,12 @@
             {{end}}
         </div>
     </div>
+
+    <script>
+        function toggleWishlist(propertyId) {
+            console.log('Toggle wishlist for property:', propertyId);
+            // Wishlist functionality will be implemented later
+        }
+    </script>
 </body>
 </html>

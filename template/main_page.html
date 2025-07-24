@@ -10,44 +10,51 @@
         <a href="/" class="logo">AirBnBClone</a>
         
         <div class="search-container">
-            <div class="search-bar">
-                <div class="search-field">
-                    <label>Where</label>
-                    <input type="text" placeholder="Search destinations" id="destination">
+            <form action="/listings" method="GET" style="display: contents;">
+                <div class="search-bar">
+                    <div class="search-field">
+                        <label>Where</label>
+                        <input type="text" name="destination" placeholder="Search destinations" id="destination">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Check in</label>
+                        <input type="date" name="checkin" id="checkin">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Check out</label>
+                        <input type="date" name="checkout" id="checkout">
+                    </div>
+                    <div class="search-divider"></div>
+                    <div class="search-field">
+                        <label>Who</label>
+                        <input type="text" name="guests" placeholder="Add guests" id="guests">
+                    </div>
+                    <button type="submit" class="search-button">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" fill="white"/>
+                        </svg>
+                    </button>
+                    <a href="/explore" class="explore-button">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13z" fill="white"/>
+                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="white"/>
+                        </svg>
+                        Explore
+                    </a>
                 </div>
-                <div class="search-divider"></div>
-                <div class="search-field">
-                    <label>Check in</label>
-                    <input type="date" id="checkin">
-                </div>
-                <div class="search-divider"></div>
-                <div class="search-field">
-                    <label>Check out</label>
-                    <input type="date" id="checkout">
-                </div>
-                <div class="search-divider"></div>
-                <div class="search-field">
-                    <label>Who</label>
-                    <input type="text" placeholder="Add guests" id="guests">
-                </div>
-                <button class="search-button" onclick="performSearch()">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" fill="white"/>
-                    </svg>
-                </button>
-                <a href="/explore" class="explore-button">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13z" fill="white"/>
-                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="white"/>
-                    </svg>
-                    Explore
-                </a>
-            </div>
+            </form>
         </div>
         
         <div class="auth-buttons">
-            <a href="/login" class="btn btn-login">Login</a>
-            <a href="/register" class="btn btn-signup">Sign Up</a>
+            {{if .Auth.IsAuthenticated}}
+                <a href="/my-profile" class="btn btn-login">My Profile</a>
+                <a href="/logout" class="btn btn-signup">Logout</a>
+            {{else}}
+                <a href="/login" class="btn btn-login">Login</a>
+                <a href="/register" class="btn btn-signup">Sign Up</a>
+            {{end}}
         </div>
     </div>
 
