@@ -113,22 +113,46 @@ func user_profile_handler(w http.ResponseWriter, r *http.Request) {
 	isAdmin := user_data.Role == "admin" || user_data.Role == "moderator"
 	userListings := get_user_listings(intID, isAdmin)
 
+	// Get user's bookings (only for own profile)
+	var userBookings []Booking
+	var hostBookings []Booking
+	if is_own_profile {
+		userBookings, err = get_user_bookings(intID)
+		if err != nil {
+			log.Printf("Error fetching user bookings: %v", err)
+		}
+
+		// Also get bookings for properties they host
+		hostBookings, err = get_host_bookings(intID)
+		if err != nil {
+			log.Printf("Error fetching host bookings: %v", err)
+		}
+	}
+
+	authCtx := get_auth(r)
+
 	template_data := struct {
 		User         *UserData
 		IsOwnProfile bool
 		LoggedUserID int
 		Listings     []Listing
 		IsAdmin      bool
+		UserBookings []Booking
+		HostBookings []Booking
+		Auth         AuthContext
 	}{
 		User:         user_data,
 		IsOwnProfile: is_own_profile,
 		LoggedUserID: logged_user_id,
 		Listings:     userListings,
 		IsAdmin:      isAdmin,
+		UserBookings: userBookings,
+		HostBookings: hostBookings,
+		Auth:         authCtx,
 	}
 
-	log.Printf("Rendering profile for user: %s (ID: %d), own profile: %t, listings count: %d",
-		user_data.Username, user_data.ID, is_own_profile, len(userListings))
+	log.Printf("Rendering profile for user: %s (ID: %d), own profile: %t, listings count: %d, bookings count: %d",
+		user_data.Username, user_data.ID, is_own_profile, len(userListings), len(userBookings))
 
 	tmpl := template.Must(template.ParseFiles("template/users_page.html"))
 	err = tmpl.Execute(w, template_data)

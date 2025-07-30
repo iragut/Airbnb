@@ -2,10 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
@@ -95,6 +97,222 @@ type PropertyDetail struct {
 	Reviews   []Review
 }
 
+type Booking struct {
+	ID            int
+	PostID        int
+	UserID        int
+	HostID        int
+	StartDate     string
+	EndDate       string
+	Guests        int
+	TotalPrice    float64
+	Status        string
+	CreatedAt     string
+	PropertyTitle string
+	PropertyCity  string
+	UserName      string
+}
+
+func create_listing(user_id int, title string, country string, city string, address string, description string, price float64, postType string) (int, error) {
+	query := "INSERT INTO Posts (user_id, title, country, city, address, description, price, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+
+	result, err := db.Exec(query, user_id, title, country, city, address, description, price, postType)
+	if err != nil {
+		log.Printf("Error creating listing: %v", err)
+		return 0, err
+	}
+
+	// Get the ID of the newly created listing
+	listingID, err := result.LastInsertId()
+	if err != nil {
+		log.Printf("Error getting listing ID: %v", err)
+		return 0, err
+	}
+
+	log.Printf("Listing created successfully with ID: %d", listingID)
+	return int(listingID), nil
+}
+
+func get_countries() []string {
+	return []string{
+		"United States",
+		"United Kingdom",
+		"France",
+		"Germany",
+		"Italy",
+		"Spain",
+		"Japan",
+		"Australia",
+		"Canada",
+		"Netherlands",
+		"Switzerland",
+		"Austria",
+		"Belgium",
+		"Portugal",
+		"Greece",
+		"Croatia",
+		"Czech Republic",
+		"Poland",
+		"Hungary",
+		"Romania",
+		"UAE",
+		"Thailand",
+		"Indonesia",
+		"Malaysia",
+		"Singapore",
+		"South Korea",
+		"China",
+		"India",
+		"Brazil",
+		"Mexico",
+		"Argentina",
+		"Chile",
+		"Colombia",
+	}
+}
+
+func create_booking(postID, userID, hostID, guests int, startDate, endDate string, totalPrice float64) error {
+	// First check if dates are available
+	available, err := check_availability(postID, startDate, endDate)
+	if err != nil {
+		return err
+	}
+	if !available {
+		return fmt.Errorf("dates are not available")
+	}
+
+	query := `INSERT INTO Bookings (post_id, user_id, host_id, start_date, end_date, guests, total_price) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+
+	_, err = db.Exec(query, postID, userID, hostID, startDate, endDate, guests, totalPrice)
+	if err != nil {
+		log.Printf("Error creating booking: %v", err)
+		return err
+	}
+
+	log.Printf("Booking created successfully for user %d, property %d", userID, postID)
+	return nil
+}
+
+func check_availability(postID int, startDate, endDate string) (bool, error) {
+	query := `
+		SELECT COUNT(*) FROM Bookings 
+		WHERE post_id = ? 
+		AND (
+			(start_date <= ? AND end_date > ?) OR
+			(start_date < ? AND end_date >= ?) OR
+			(start_date >= ? AND end_date <= ?)
+		)`
+
+	var count int
+	err := db.QueryRow(query, postID, startDate, startDate, endDate, endDate, startDate, endDate).Scan(&count)
+	if err != nil {
+		log.Printf("Error checking availability: %v", err)
+		return false, err
+	}
+
+	return count == 0, nil
+}
+
+func get_user_bookings(userID int) ([]Booking, error) {
+	var bookings []Booking
+
+	query := `
+		SELECT b.id, b.post_id, b.user_id, b.host_id, b.start_date, b.end_date, 
+		       b.guests, b.total_price, b.created_at, p.title, p.city
+		FROM Bookings b
+		JOIN Posts p ON b.post_id = p.id
+		WHERE b.user_id = ?
+		ORDER BY b.created_at DESC`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		log.Printf("Error fetching user bookings: %v", err)
+		return bookings, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var booking Booking
+		err := rows.Scan(
+			&booking.ID, &booking.PostID, &booking.UserID, &booking.HostID,
+			&booking.StartDate, &booking.EndDate, &booking.Guests, &booking.TotalPrice,
+			&booking.CreatedAt, &booking.PropertyTitle, &booking.PropertyCity,
+		)
+		if err != nil {
+			log.Printf("Error scanning booking: %v", err)
+			continue
+		}
+		bookings = append(bookings, booking)
+	}
+
+	return bookings, nil
+}
+
+func get_host_bookings(hostID int) ([]Booking, error) {
+	var bookings []Booking
+
+	query := `
+		SELECT b.id, b.post_id, b.user_id, b.host_id, b.start_date, b.end_date, 
+		       b.guests, b.total_price, b.created_at, p.title, p.city, u.username
+		FROM Bookings b
+		JOIN Posts p ON b.post_id = p.id
+		JOIN Users u ON b.user_id = u.id
+		WHERE b.host_id = ?
+		ORDER BY b.created_at DESC`
+
+	rows, err := db.Query(query, hostID)
+	if err != nil {
+		log.Printf("Error fetching host bookings: %v", err)
+		return bookings, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var booking Booking
+		err := rows.Scan(
+			&booking.ID, &booking.PostID, &booking.UserID, &booking.HostID,
+			&booking.StartDate, &booking.EndDate, &booking.Guests, &booking.TotalPrice,
+			&booking.CreatedAt, &booking.PropertyTitle, &booking.PropertyCity, &booking.UserName,
+		)
+		if err != nil {
+			log.Printf("Error scanning host booking: %v", err)
+			continue
+		}
+		bookings = append(bookings, booking)
+	}
+
+	return bookings, nil
+}
+
+func calculate_booking_price(propertyID int, startDate, endDate string) (float64, int, error) {
+	// Get property price
+	property, err := get_listing_by_id(propertyID)
+	if err != nil || property == nil {
+		return 0, 0, fmt.Errorf("property not found")
+	}
+
+	// Parse dates and calculate nights
+	start, err := time.Parse("2006-01-02", startDate)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	end, err := time.Parse("2006-01-02", endDate)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	nights := int(end.Sub(start).Hours() / 24)
+	if nights <= 0 {
+		return 0, 0, fmt.Errorf("invalid date range")
+	}
+
+	totalPrice := float64(nights) * property.Price
+
+	return totalPrice, nights, nil
+}
+
 func create_amenities(post_id int, wifi, ac, kitchen, parking, pets, pool, washer, dryer, tv, heating, balcony bool) {
 	query := `INSERT INTO Amenities (post_id, wifi, air_conditioning, kitchen, parking, pets_allowed, pool, washer, dryer, tv, heating, balcony) 
 			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -104,8 +322,6 @@ func create_amenities(post_id int, wifi, ac, kitchen, parking, pets, pool, washe
 		log.Printf("Error creating amenities: %v", err)
 	}
 }
-
-// Create a review
 func create_review(post_id, user_id, rating int, comment string) {
 	query := `INSERT INTO Reviews (post_id, user_id, rating, comment) VALUES (?, ?, ?, ?)`
 
@@ -115,7 +331,6 @@ func create_review(post_id, user_id, rating int, comment string) {
 	}
 }
 
-// Get property details with amenities and reviews
 func get_property_detail(propertyID int) (*PropertyDetail, error) {
 	// Get basic property info
 	property, err := get_listing_by_id(propertyID)
@@ -322,7 +537,6 @@ func get_listing_by_id(listingID int) (*Listing, error) {
 	return &listing, nil
 }
 
-// Extract number of posts in a city
 func get_post_count_by_city(city string) int {
 	query := `SELECT COUNT(*) FROM Posts WHERE city = ?`
 	var count int

@@ -9,8 +9,13 @@
         <a href="/" class="logo">AirBnBClone</a>
         
         <div class="auth-buttons">
-            <a href="/my-profile" class="btn btn-login">My Profile</a>
-            <a href="/logout" class="btn btn-signup">Logout</a>
+            {{if .Auth.IsAuthenticated}}
+                <a href="/my-profile" class="btn btn-login">My Profile</a>
+                <a href="/logout" class="btn btn-signup">Logout</a>
+            {{else}}
+                <a href="/login" class="btn btn-login">Login</a>
+                <a href="/register" class="btn btn-signup">Sign Up</a>
+            {{end}}
         </div>
     </div>
 
@@ -60,10 +65,106 @@
                 </div>
             {{end}}
 
+            {{if .IsOwnProfile}}
+                <div class="profile-section">
+                    <h2>My Bookings</h2>
+                    
+                    {{if .UserBookings}}
+                        <div class="bookings-grid">
+                            {{range .UserBookings}}
+                            <div class="booking-card">
+                                <div class="booking-header">
+                                    <h3>{{.PropertyTitle}}</h3>
+                                    <span class="booking-status confirmed">Confirmed</span>
+                                </div>
+                                <div class="booking-details">
+                                    <div class="booking-info">
+                                        <span class="booking-label">Location:</span>
+                                        <span>{{.PropertyCity}}</span>
+                                    </div>
+                                    <div class="booking-info">
+                                        <span class="booking-label">Dates:</span>
+                                        <span>{{.StartDate}} - {{.EndDate}}</span>
+                                    </div>
+                                    <div class="booking-info">
+                                        <span class="booking-label">Guests:</span>
+                                        <span>{{.Guests}}</span>
+                                    </div>
+                                    <div class="booking-info total">
+                                        <span class="booking-label">Total:</span>
+                                        <span class="booking-price">${{printf "%.2f" .TotalPrice}}</span>
+                                    </div>
+                                </div>
+                                <div class="booking-actions">
+                                    <a href="/property/{{.PostID}}" class="btn btn-view">View Property</a>
+                                </div>
+                            </div>
+                            {{end}}
+                        </div>
+                    {{else}}
+                        <div class="no-bookings">
+                            <p>You haven't made any bookings yet.</p>
+                            <a href="/explore" class="btn btn-create">Start Exploring</a>
+                        </div>
+                    {{end}}
+                </div>
+
+                {{if .HostBookings}}
+                <div class="profile-section">
+                    <h2>Bookings for My Properties</h2>
+                    
+                    <div class="bookings-grid">
+                        {{range .HostBookings}}
+                        <div class="booking-card host-booking">
+                            <div class="booking-header">
+                                <h3>{{.PropertyTitle}}</h3>
+                                <span class="booking-status confirmed">New Booking</span>
+                            </div>
+                            <div class="booking-details">
+                                <div class="booking-info">
+                                    <span class="booking-label">Guest:</span>
+                                    <span>{{.UserName}}</span>
+                                </div>
+                                <div class="booking-info">
+                                    <span class="booking-label">Dates:</span>
+                                    <span>{{.StartDate}} - {{.EndDate}}</span>
+                                </div>
+                                <div class="booking-info">
+                                    <span class="booking-label">Guests:</span>
+                                    <span>{{.Guests}}</span>
+                                </div>
+                                <div class="booking-info total">
+                                    <span class="booking-label">Earnings:</span>
+                                    <span class="booking-price">${{printf "%.2f" .TotalPrice}}</span>
+                                </div>
+                            </div>
+                            <div class="booking-actions">
+                                <a href="/property/{{.PostID}}" class="btn btn-view">View Property</a>
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            {{end}}
+
             <div class="profile-section">
-                <h2>
-                    {{if .IsAdmin}}All Listings (Admin View){{else if .IsOwnProfile}}My Listings{{else}}Listings{{end}}
-                </h2>
+                <div class="listings-header">
+                    <h2>
+                        {{if .IsAdmin}}All Listings (Admin View){{else if .IsOwnProfile}}My Listings{{else}}Listings{{end}}
+                    </h2>
+                    
+                    {{if .IsOwnProfile}}
+                    <div class="listings-actions">
+                        <a href="/add-listing" class="btn btn-create-listing">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 2a.75.75 0 01.75.75v6.5h6.5a.75.75 0 010 1.5h-6.5v6.5a.75.75 0 01-1.5 0v-6.5h-6.5a.75.75 0 010-1.5h6.5v-6.5A.75.75 0 0110 2z"/>
+                            </svg>
+                            Add New Listing
+                        </a>
+                    </div>
+                    {{end}}
+                </div>
                 
                 {{if .Listings}}
                     <div class="listings-grid">
@@ -116,30 +217,31 @@
                     </div>
                 {{else}}
                     <div class="no-listings">
-                        <p>
-                            {{if .IsAdmin}}
-                                No listings found in the system.
-                            {{else if .IsOwnProfile}}
-                                You haven't created any listings yet.
-                            {{else}}
-                                No listings available.
+                        <div class="no-listings-content">
+                            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                                <path d="M32 8C18.7 8 8 18.7 8 32s10.7 24 24 24 24-10.7 24-24S45.3 8 32 8zm12 26H34v10h-4V34H20v-4h10V20h4v10h10v4z" fill="#ddd"/>
+                            </svg>
+                            <h3>
+                                {{if .IsAdmin}}
+                                    No listings found in the system.
+                                {{else if .IsOwnProfile}}
+                                    Start hosting today!
+                                {{else}}
+                                    No listings available.
+                                {{end}}
+                            </h3>
+                            <p>
+                                {{if .IsOwnProfile}}
+                                    Share your space and earn money by hosting travelers from around the world.
+                                {{end}}
+                            </p>
+                            {{if .IsOwnProfile}}
+                                <a href="/add-listing" class="btn btn-create-listing">Create Your First Listing</a>
                             {{end}}
-                        </p>
-                        {{if .IsOwnProfile}}
-                            <button class="btn btn-create">Create Your First Listing</button>
-                        {{end}}
+                        </div>
                     </div>
                 {{end}}
             </div>
-
-            {{if .IsOwnProfile}}
-                <div class="profile-section">
-                    <h2>My Bookings</h2>
-                    <div class="bookings-list">
-                        <p>No bookings yet.</p>
-                    </div>
-                </div>
-            {{end}}
         </div>
     </div>
 

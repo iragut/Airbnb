@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -452,6 +453,226 @@ func property_detail_handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func booking_handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if user is authenticated
+	authenticated, userID := is_authenticated(r)
+	if !authenticated {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Parse form data
+	propertyIDStr := r.FormValue("property_id")
+	checkin := r.FormValue("checkin")
+	checkout := r.FormValue("checkout")
+	guestsStr := r.FormValue("guests")
+
+	// Validate input
+	if propertyIDStr == "" || checkin == "" || checkout == "" || guestsStr == "" {
+		http.Error(w, "All fields are required", http.StatusBadRequest)
+		return
+	}
+
+	propertyID, err := strconv.Atoi(propertyIDStr)
+	if err != nil {
+		http.Error(w, "Invalid property ID", http.StatusBadRequest)
+		return
+	}
+
+	guests, err := strconv.Atoi(guestsStr)
+	if err != nil || guests <= 0 {
+		http.Error(w, "Invalid number of guests", http.StatusBadRequest)
+		return
+	}
+
+	// Get property details to find the host
+	property, err := get_listing_by_id(propertyID)
+	if err != nil || property == nil {
+		http.Error(w, "Property not found", http.StatusNotFound)
+		return
+	}
+
+	// Check if user is trying to book their own property
+	if property.UserID == userID {
+		http.Error(w, "You cannot book your own property", http.StatusBadRequest)
+		return
+	}
+
+	// Calculate total price
+	totalPrice, nights, err := calculate_booking_price(propertyID, checkin, checkout)
+	if err != nil {
+		http.Error(w, "Error calculating price: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Create booking
+	err = create_booking(propertyID, userID, property.UserID, guests, checkin, checkout, totalPrice)
+	if err != nil {
+		if err.Error() == "dates are not available" {
+			http.Error(w, "Sorry, these dates are not available", http.StatusConflict)
+			return
+		}
+		http.Error(w, "Error creating booking: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Redirect to booking confirmation page
+	http.Redirect(w, r, "/booking-success?property="+propertyIDStr+"&nights="+strconv.Itoa(nights)+"&total="+fmt.Sprintf("%.2f", totalPrice), http.StatusSeeOther)
+}
+
+func booking_success_handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if user is authenticated
+	authenticated, _ := is_authenticated(r)
+	if !authenticated {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	authCtx := get_auth(r)
+
+	// Get query parameters
+	propertyIDStr := r.URL.Query().Get("property")
+	nightsStr := r.URL.Query().Get("nights")
+	totalStr := r.URL.Query().Get("total")
+
+	propertyID, _ := strconv.Atoi(propertyIDStr)
+	nights, _ := strconv.Atoi(nightsStr)
+	total, _ := strconv.ParseFloat(totalStr, 64)
+
+	// Get property details
+	property, err := get_listing_by_id(propertyID)
+	if err != nil || property == nil {
+		http.Error(w, "Property not found", http.StatusNotFound)
+		return
+	}
+
+	// Prepare template data
+	templateData := struct {
+		Auth     AuthContext
+		Property *Listing
+		Nights   int
+		Total    float64
+	}{
+		Auth:     authCtx,
+		Property: property,
+		Nights:   nights,
+		Total:    total,
+	}
+
+	tmpl := template.Must(template.ParseFiles("template/booking_success.html"))
+	err = tmpl.Execute(w, templateData)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Println("Error executing template:", err)
+	}
+}
+
+func add_listing_handler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		authenticated, _ := is_authenticated(r)
+		if !authenticated {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		authCtx := get_auth(r)
+
+		templateData := struct {
+			Auth AuthContext
+		}{
+			Auth: authCtx,
+		}
+
+		tmpl := template.Must(template.ParseFiles("template/add_listing.html"))
+		err := tmpl.Execute(w, templateData)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Println("Error executing template:", err)
+		}
+
+	case http.MethodPost:
+		authenticated, userID := is_authenticated(r)
+		if !authenticated {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// Parse form data
+		title := strings.TrimSpace(r.FormValue("title"))
+		description := strings.TrimSpace(r.FormValue("description"))
+		country := strings.TrimSpace(r.FormValue("country"))
+		city := strings.TrimSpace(r.FormValue("city"))
+		address := strings.TrimSpace(r.FormValue("address"))
+		priceStr := r.FormValue("price")
+		propertyType := r.FormValue("type")
+
+		// Amenities
+		wifi := r.FormValue("wifi") == "on"
+		kitchen := r.FormValue("kitchen") == "on"
+		ac := r.FormValue("air_conditioning") == "on"
+		parking := r.FormValue("parking") == "on"
+		pool := r.FormValue("pool") == "on"
+		washer := r.FormValue("washer") == "on"
+		dryer := r.FormValue("dryer") == "on"
+		tv := r.FormValue("tv") == "on"
+		heating := r.FormValue("heating") == "on"
+		balcony := r.FormValue("balcony") == "on"
+		pets := r.FormValue("pets_allowed") == "on"
+
+		// Validate required fields
+		if title == "" || description == "" || country == "" || city == "" || address == "" || priceStr == "" || propertyType == "" {
+			http.Error(w, "All required fields must be filled", http.StatusBadRequest)
+			return
+		}
+
+		// Validate price
+		price, err := strconv.ParseFloat(priceStr, 64)
+		if err != nil || price <= 0 {
+			http.Error(w, "Invalid price", http.StatusBadRequest)
+			return
+		}
+
+		// Validate property type
+		validTypes := map[string]bool{
+			"apartment": true,
+			"house":     true,
+			"room":      true,
+			"other":     true,
+		}
+		if !validTypes[propertyType] {
+			http.Error(w, "Invalid property type", http.StatusBadRequest)
+			return
+		}
+
+		// Create the listing
+		listingID, err := create_listing(userID, title, country, city, address, description, price, propertyType)
+		if err != nil {
+			http.Error(w, "Error creating listing: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Add amenities
+		create_amenities(listingID, wifi, ac, kitchen, parking, pets, pool, washer, dryer, tv, heating, balcony)
+
+		// Redirect to the new listing
+		http.Redirect(w, r, "/property/"+strconv.Itoa(listingID), http.StatusSeeOther)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 func main() {
 	fs := http.FileServer(http.Dir("static/"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
@@ -468,6 +689,10 @@ func main() {
 	http.HandleFunc("/my-profile", my_profile_handler)
 
 	http.HandleFunc("/property/", property_detail_handler)
+	http.HandleFunc("/add-listing", add_listing_handler)
+
+	http.HandleFunc("/book", booking_handler)
+	http.HandleFunc("/booking-success", booking_success_handler)
 
 	log.Println("Server starting on :8080")
 

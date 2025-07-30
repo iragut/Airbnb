@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Booking Confirmed - AirBnB Clone</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo">AirBnBClone</a>
+        
+        <div class="auth-buttons">
+            {{if .Auth.IsAuthenticated}}
+                <a href="/my-profile" class="btn btn-login">My Profile</a>
+                <a href="/logout" class="btn btn-signup">Logout</a>
+            {{else}}
+                <a href="/login" class="btn btn-login">Login</a>
+                <a href="/register" class="btn btn-signup">Sign Up</a>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="booking-success-container">
+        <div class="success-content">
+            <div class="success-icon">
+                <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                    <circle cx="40" cy="40" r="40" fill="#00D084"/>
+                    <path d="M25 40L35 50L55 30" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            
+            <h1>Booking Confirmed!</h1>
+            <p class="success-message">Your reservation has been successfully created.</p>
+            
+            <div class="booking-details">
+                <h2>Booking Details</h2>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Property:</span>
+                    <span class="detail-value">{{.Property.Title}}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Location:</span>
+                    <span class="detail-value">{{.Property.City}}, {{.Property.Country}}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Duration:</span>
+                    <span class="detail-value">{{.Nights}} {{if eq .Nights 1}}night{{else}}nights{{end}}</span>
+                </div>
+                
+                <div class="detail-item total">
+                    <span class="detail-label">Total Price:</span>
+                    <span class="detail-value">${{printf "%.2f" .Total}}</span>
+                </div>
+            </div>
+            
+            <div class="success-actions">
+                <a href="/my-profile" class="btn btn-primary">View My Bookings</a>
+                <a href="/property/{{.Property.ID}}" class="btn btn-secondary">Back to Property</a>
+                <a href="/" class="btn btn-secondary">Continue Browsing</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
