@@ -66,6 +66,52 @@
             {{end}}
 
             {{if .IsOwnProfile}}
+                <!-- Reviews to Write Section -->
+                {{if .ReviewableBookings}}
+                <div class="profile-section">
+                    <h2>🌟 Write Reviews</h2>
+                    <p>Your host has enabled you to review these properties:</p>
+                    
+                    <div class="reviewable-bookings">
+                        {{range .ReviewableBookings}}
+                        <div class="reviewable-card">
+                            <div class="booking-header">
+                                <h3>{{.PropertyTitle}}</h3>
+                                {{if eq .Status "can_review"}}
+                                    <span class="booking-status can-review">Can Review</span>
+                                {{else}}
+                                    <span class="booking-status reviewed">Reviewed</span>
+                                {{end}}
+                            </div>
+                            <div class="booking-details">
+                                <div class="booking-info">
+                                    <span class="booking-label">Location:</span>
+                                    <span>{{.PropertyCity}}</span>
+                                </div>
+                                <div class="booking-info">
+                                    <span class="booking-label">Stay Dates:</span>
+                                    <span>{{.StartDate}} - {{.EndDate}}</span>
+                                </div>
+                            </div>
+                            {{if eq .Status "can_review"}}
+                                <div class="booking-actions">
+                                    <button class="btn btn-review" onclick="openReviewModal('{{.PostID}}', '{{.ID}}', '{{.PropertyTitle}}')">
+                                        Write Review
+                                    </button>
+                                    <a href="/property/{{.PostID}}" class="btn btn-view">View Property</a>
+                                </div>
+                            {{else}}
+                                <div class="booking-actions">
+                                    <span class="review-done">✓ Review submitted</span>
+                                    <a href="/property/{{.PostID}}" class="btn btn-view">View Property</a>
+                                </div>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+
                 <div class="profile-section">
                     <h2>My Bookings</h2>
                     
@@ -111,14 +157,19 @@
 
                 {{if .HostBookings}}
                 <div class="profile-section">
-                    <h2>Bookings for My Properties</h2>
+                    <h2>Manage Guest Reviews</h2>
+                    <p>Allow your guests to leave reviews for their stays:</p>
                     
                     <div class="bookings-grid">
                         {{range .HostBookings}}
                         <div class="booking-card host-booking">
                             <div class="booking-header">
                                 <h3>{{.PropertyTitle}}</h3>
-                                <span class="booking-status confirmed">New Booking</span>
+                                {{if eq .Status "review_enabled"}}
+                                    <span class="booking-status review-enabled">Review Enabled</span>
+                                {{else}}
+                                    <span class="booking-status completed">Completed</span>
+                                {{end}}
                             </div>
                             <div class="booking-details">
                                 <div class="booking-info">
@@ -139,6 +190,13 @@
                                 </div>
                             </div>
                             <div class="booking-actions">
+                                {{if eq .Status "completed"}}
+                                    <button class="btn btn-enable-review" onclick="enableReview('{{.ID}}', '{{.UserName}}', '{{.PropertyTitle}}')">
+                                        Enable Review
+                                    </button>
+                                {{else}}
+                                    <span class="review-enabled-text">✓ Guest can review</span>
+                                {{end}}
                                 <a href="/property/{{.PostID}}" class="btn btn-view">View Property</a>
                             </div>
                         </div>
@@ -245,11 +303,136 @@
         </div>
     </div>
 
+    <!-- Review Modal - Fixed Structure -->
+    <div id="reviewModal" class="review-modal-overlay" style="display: none;">
+        <div class="review-modal-dialog">
+            <div class="review-modal-content">
+                <div class="review-modal-header">
+                    <h2>Write a Review</h2>
+                    <button type="button" class="review-modal-close" onclick="closeReviewModal()">&times;</button>
+                </div>
+                <div class="review-modal-body">
+                    <h3 id="reviewPropertyTitle"></h3>
+                    <form id="reviewForm">
+                        <input type="hidden" id="reviewPropertyId" name="property_id">
+                        <input type="hidden" id="reviewBookingId" name="booking_id">
+                        
+                        <div class="rating-section">
+                            <label>Rating:</label>
+                            <div class="star-rating">
+                                <input type="radio" name="rating" value="5" id="star5">
+                                <label for="star5">⭐</label>
+                                <input type="radio" name="rating" value="4" id="star4">
+                                <label for="star4">⭐</label>
+                                <input type="radio" name="rating" value="3" id="star3">
+                                <label for="star3">⭐</label>
+                                <input type="radio" name="rating" value="2" id="star2">
+                                <label for="star2">⭐</label>
+                                <input type="radio" name="rating" value="1" id="star1">
+                                <label for="star1">⭐</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reviewComment">Your Review:</label>
+                            <textarea id="reviewComment" name="comment" rows="4" placeholder="Share your experience..." required></textarea>
+                        </div>
+                        
+                        <div class="review-modal-actions">
+                            <button type="submit" class="btn btn-create">Submit Review</button>
+                            <button type="button" class="btn btn-cancel" onclick="closeReviewModal()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function toggleWishlist(propertyId) {
             console.log('Toggle wishlist for property:', propertyId);
-            // Wishlist functionality will be implemented later
         }
+
+        function openReviewModal(propertyId, bookingId, propertyTitle) {
+            document.getElementById('reviewPropertyId').value = propertyId;
+            document.getElementById('reviewBookingId').value = bookingId;
+            document.getElementById('reviewPropertyTitle').textContent = propertyTitle;
+            document.getElementById('reviewModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').style.display = 'none';
+            document.getElementById('reviewForm').reset();
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        function enableReview(bookingId, guestName, propertyTitle) {
+            if (confirm(`Allow ${guestName} to review "${propertyTitle}"?`)) {
+                fetch('/enable-review', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `booking_id=${bookingId}`
+                })
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Error enabling review');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error enabling review');
+                });
+            }
+        }
+
+        // Submit review form
+        document.getElementById('reviewForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = new URLSearchParams(formData);
+            
+            fetch('/submit-review', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: data
+            })
+            .then(response => {
+                if (response.ok) {
+                    closeReviewModal();
+                    location.reload();
+                } else {
+                    alert('Error submitting review');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error submitting review');
+            });
+        });
+
+        // Star rating functionality
+        const stars = document.querySelectorAll('.star-rating input');
+        stars.forEach((star, index) => {
+            star.addEventListener('change', function() {
+                // Update visual feedback if needed
+                console.log('Rating selected:', this.value);
+            });
+        });
+
+        // Close modal when clicking outside the modal content
+        document.getElementById('reviewModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeReviewModal();
+            }
+        });
     </script>
 </body>
 </html>

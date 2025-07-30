@@ -60,24 +60,148 @@
             
             <div class="filters-container">
                 <div class="filters">
-                    <button class="filter-btn" onclick="toggleFilter('price')">
+                    <button class="filter-btn" onclick="toggleFilter('price')" id="priceFilterBtn">
                         <span>Price</span>
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M4.427 9.573L8 13.147l3.573-3.574A.5.5 0 0 1 12.5 10h-9a.5.5 0 0 1 .427-.427z"/>
                         </svg>
                     </button>
-                    <button class="filter-btn" onclick="toggleFilter('type')">
+                    <button class="filter-btn" onclick="toggleFilter('type')" id="typeFilterBtn">
                         <span>Type of place</span>
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M4.427 9.573L8 13.147l3.573-3.574A.5.5 0 0 1 12.5 10h-9a.5.5 0 0 1 .427-.427z"/>
                         </svg>
                     </button>
-                    <button class="filter-btn" onclick="toggleFilter('amenities')">
+                    <button class="filter-btn" onclick="toggleFilter('amenities')" id="amenitiesFilterBtn">
                         <span>Amenities</span>
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M4.427 9.573L8 13.147l3.573-3.574A.5.5 0 0 1 12.5 10h-9a.5.5 0 0 1 .427-.427z"/>
                         </svg>
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Panels -->
+        <div id="priceFilter" class="filter-panel" style="display: none;">
+            <div class="filter-content">
+                <h3>Price Range (per night)</h3>
+                <div class="price-range">
+                    <div class="price-inputs">
+                        <div class="price-input-group">
+                            <label>Minimum</label>
+                            <input type="number" id="minPrice" placeholder="$0" min="0" value="{{.SearchParams.MinPrice}}">
+                        </div>
+                        <div class="price-input-group">
+                            <label>Maximum</label>
+                            <input type="number" id="maxPrice" placeholder="$1000+" min="0" value="{{.SearchParams.MaxPrice}}">
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-clear" onclick="clearPriceFilter()">Clear</button>
+                        <button class="btn btn-apply" onclick="applyPriceFilter()">Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="typeFilter" class="filter-panel" style="display: none;">
+            <div class="filter-content">
+                <h3>Type of Place</h3>
+                <div class="type-options">
+                    <label class="type-option">
+                        <input type="radio" name="propertyType" value="" {{if not .SearchParams.PropertyType}}checked{{end}}>
+                        <span class="type-card">
+                            <div class="type-icon">🏠</div>
+                            <div class="type-name">Any type</div>
+                        </span>
+                    </label>
+                    <label class="type-option">
+                        <input type="radio" name="propertyType" value="apartment" {{if eq .SearchParams.PropertyType "apartment"}}checked{{end}}>
+                        <span class="type-card">
+                            <div class="type-icon">🏢</div>
+                            <div class="type-name">Apartment</div>
+                        </span>
+                    </label>
+                    <label class="type-option">
+                        <input type="radio" name="propertyType" value="house" {{if eq .SearchParams.PropertyType "house"}}checked{{end}}>
+                        <span class="type-card">
+                            <div class="type-icon">🏡</div>
+                            <div class="type-name">House</div>
+                        </span>
+                    </label>
+                    <label class="type-option">
+                        <input type="radio" name="propertyType" value="room" {{if eq .SearchParams.PropertyType "room"}}checked{{end}}>
+                        <span class="type-card">
+                            <div class="type-icon">🛏️</div>
+                            <div class="type-name">Room</div>
+                        </span>
+                    </label>
+                    <label class="type-option">
+                        <input type="radio" name="propertyType" value="other" {{if eq .SearchParams.PropertyType "other"}}checked{{end}}>
+                        <span class="type-card">
+                            <div class="type-icon">🏕️</div>
+                            <div class="type-name">Other</div>
+                        </span>
+                    </label>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-clear" onclick="clearTypeFilter()">Clear</button>
+                    <button class="btn btn-apply" onclick="applyTypeFilter()">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="amenitiesFilter" class="filter-panel" style="display: none;">
+            <div class="filter-content">
+                <h3>Amenities</h3>
+                <div class="amenities-grid">
+                    <label class="amenity-checkbox">
+                        <input type="checkbox" name="wifi" {{if .SearchParams.Wifi}}checked{{end}}>
+                        <span class="amenity-item">
+                            <span class="amenity-icon">📶</span>
+                            <span class="amenity-name">Wifi</span>
+                        </span>
+                    </label>
+                    <label class="amenity-checkbox">
+                        <input type="checkbox" name="kitchen" {{if .SearchParams.Kitchen}}checked{{end}}>
+                        <span class="amenity-item">
+                            <span class="amenity-icon">🍳</span>
+                            <span class="amenity-name">Kitchen</span>
+                        </span>
+                    </label>
+                    <label class="amenity-checkbox">
+                        <input type="checkbox" name="air_conditioning" {{if .SearchParams.AirConditioning}}checked{{end}}>
+                        <span class="amenity-item">
+                            <span class="amenity-icon">❄️</span>
+                            <span class="amenity-name">Air conditioning</span>
+                        </span>
+                    </label>
+                    <label class="amenity-checkbox">
+                        <input type="checkbox" name="parking" {{if .SearchParams.Parking}}checked{{end}}>
+                        <span class="amenity-item">
+                            <span class="amenity-icon">🚗</span>
+                            <span class="amenity-name">Free parking</span>
+                        </span>
+                    </label>
+                    <label class="amenity-checkbox">
+                        <input type="checkbox" name="pool" {{if .SearchParams.Pool}}checked{{end}}>
+                        <span class="amenity-item">
+                            <span class="amenity-icon">🏊</span>
+                            <span class="amenity-name">Pool</span>
+                        </span>
+                    </label>
+                    <label class="amenity-checkbox">
+                        <input type="checkbox" name="tv" {{if .SearchParams.TV}}checked{{end}}>
+                        <span class="amenity-item">
+                            <span class="amenity-icon">📺</span>
+                            <span class="amenity-name">TV</span>
+                        </span>
+                    </label>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-clear" onclick="clearAmenitiesFilter()">Clear</button>
+                    <button class="btn btn-apply" onclick="applyAmenitiesFilter()">Apply</button>
                 </div>
             </div>
         </div>
@@ -160,15 +284,166 @@
 
     <script src="/static/main.js"></script>
     <script>
+        let activeFilter = null;
+
         function toggleFilter(filterType) {
-            console.log('Toggle filter:', filterType);
-            // Filter functionality will be implemented later
+            const filterPanel = document.getElementById(filterType + 'Filter');
+            const filterBtn = document.getElementById(filterType + 'FilterBtn');
+            
+            // Close other filters
+            if (activeFilter && activeFilter !== filterType) {
+                document.getElementById(activeFilter + 'Filter').style.display = 'none';
+                document.getElementById(activeFilter + 'FilterBtn').classList.remove('active');
+            }
+            
+            // Toggle current filter
+            if (filterPanel.style.display === 'none' || !filterPanel.style.display) {
+                filterPanel.style.display = 'block';
+                filterBtn.classList.add('active');
+                activeFilter = filterType;
+            } else {
+                filterPanel.style.display = 'none';
+                filterBtn.classList.remove('active');
+                activeFilter = null;
+            }
+        }
+
+        function closeAllFilters() {
+            const filters = ['price', 'type', 'amenities'];
+            filters.forEach(filter => {
+                document.getElementById(filter + 'Filter').style.display = 'none';
+                document.getElementById(filter + 'FilterBtn').classList.remove('active');
+            });
+            activeFilter = null;
+        }
+
+        // Price filter functions
+        function clearPriceFilter() {
+            document.getElementById('minPrice').value = '';
+            document.getElementById('maxPrice').value = '';
+        }
+
+        function applyPriceFilter() {
+            const minPrice = document.getElementById('minPrice').value;
+            const maxPrice = document.getElementById('maxPrice').value;
+            applyFilters({ min_price: minPrice, max_price: maxPrice });
+        }
+
+        // Type filter functions
+        function clearTypeFilter() {
+            document.querySelector('input[name="propertyType"][value=""]').checked = true;
+        }
+
+        function applyTypeFilter() {
+            const selectedType = document.querySelector('input[name="propertyType"]:checked').value;
+            applyFilters({ type: selectedType });
+        }
+
+        // Amenities filter functions
+        function clearAmenitiesFilter() {
+            document.querySelectorAll('#amenitiesFilter input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+        }
+
+        function applyAmenitiesFilter() {
+            const selectedAmenities = {};
+            document.querySelectorAll('#amenitiesFilter input[type="checkbox"]:checked').forEach(cb => {
+                selectedAmenities[cb.name] = 'true';
+            });
+            applyFilters(selectedAmenities);
+        }
+
+        function applyFilters(newParams = {}) {
+            const currentUrl = new URL(window.location);
+            const params = new URLSearchParams(currentUrl.search);
+            
+            // Remove existing filter params that we're updating
+            if (newParams.min_price !== undefined) {
+                if (newParams.min_price) {
+                    params.set('min_price', newParams.min_price);
+                } else {
+                    params.delete('min_price');
+                }
+            }
+            
+            if (newParams.max_price !== undefined) {
+                if (newParams.max_price) {
+                    params.set('max_price', newParams.max_price);
+                } else {
+                    params.delete('max_price');
+                }
+            }
+            
+            if (newParams.type !== undefined) {
+                if (newParams.type) {
+                    params.set('type', newParams.type);
+                } else {
+                    params.delete('type');
+                }
+            }
+            
+            // Handle amenities
+            const amenityKeys = ['wifi', 'kitchen', 'air_conditioning', 'parking', 'pool', 'tv'];
+            amenityKeys.forEach(key => {
+                if (newParams[key] !== undefined) {
+                    if (newParams[key] === 'true') {
+                        params.set(key, 'true');
+                    } else {
+                        params.delete(key);
+                    }
+                } else if (Object.keys(newParams).some(k => amenityKeys.includes(k))) {
+                    // If we're updating amenities, clear ones not specified
+                    params.delete(key);
+                }
+            });
+            
+            // Reset to page 1 when applying filters
+            params.delete('page');
+            
+            // Navigate to new URL
+            window.location.href = currentUrl.pathname + '?' + params.toString();
         }
 
         function toggleWishlist(propertyId) {
             console.log('Toggle wishlist for property:', propertyId);
-            // Wishlist functionality will be implemented later
         }
+
+        // Close filters when clicking outside
+        document.addEventListener('click', function(event) {
+            const filtersContainer = document.querySelector('.filters-container');
+            const filterPanels = document.querySelectorAll('.filter-panel');
+            
+            let clickedInsideFilter = false;
+            filterPanels.forEach(panel => {
+                if (panel.contains(event.target)) {
+                    clickedInsideFilter = true;
+                }
+            });
+            
+            if (!filtersContainer.contains(event.target) && !clickedInsideFilter) {
+                closeAllFilters();
+            }
+        });
+
+        // Initialize filter button states based on current URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Update filter button appearance if filters are active
+            if (urlParams.get('min_price') || urlParams.get('max_price')) {
+                document.getElementById('priceFilterBtn').classList.add('has-filter');
+            }
+            
+            if (urlParams.get('type')) {
+                document.getElementById('typeFilterBtn').classList.add('has-filter');
+            }
+            
+            const amenities = ['wifi', 'kitchen', 'air_conditioning', 'parking', 'pool', 'tv'];
+            if (amenities.some(amenity => urlParams.get(amenity))) {
+                document.getElementById('amenitiesFilterBtn').classList.add('has-filter');
+            }
+        });
     </script>
 </body>
 </html>

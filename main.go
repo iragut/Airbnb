@@ -322,7 +322,20 @@ func listings_handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Search listings
+	// Parse amenity filters
+	params.Wifi = r.URL.Query().Get("wifi") == "true"
+	params.Kitchen = r.URL.Query().Get("kitchen") == "true"
+	params.AirConditioning = r.URL.Query().Get("air_conditioning") == "true"
+	params.Parking = r.URL.Query().Get("parking") == "true"
+	params.Pool = r.URL.Query().Get("pool") == "true"
+	params.TV = r.URL.Query().Get("tv") == "true"
+	params.Washer = r.URL.Query().Get("washer") == "true"
+	params.Dryer = r.URL.Query().Get("dryer") == "true"
+	params.Heating = r.URL.Query().Get("heating") == "true"
+	params.Balcony = r.URL.Query().Get("balcony") == "true"
+	params.PetsAllowed = r.URL.Query().Get("pets_allowed") == "true"
+
+	// Search listings using enhanced function
 	result, err := search_listings(params)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -577,6 +590,99 @@ func booking_success_handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func enable_review_handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if user is authenticated
+	authenticated, hostID := is_authenticated(r)
+	if !authenticated {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse form data
+	bookingIDStr := r.FormValue("booking_id")
+	if bookingIDStr == "" {
+		http.Error(w, "Booking ID is required", http.StatusBadRequest)
+		return
+	}
+
+	bookingID, err := strconv.Atoi(bookingIDStr)
+	if err != nil {
+		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+		return
+	}
+
+	// Enable review for the booking
+	err = enable_review_for_booking(bookingID, hostID)
+	if err != nil {
+		http.Error(w, "Error enabling review: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return success
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Review enabled successfully"))
+}
+
+func submit_review_handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	authenticated, userID := is_authenticated(r)
+	if !authenticated {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	propertyIDStr := r.FormValue("property_id")
+	bookingIDStr := r.FormValue("booking_id")
+	ratingStr := r.FormValue("rating")
+	comment := strings.TrimSpace(r.FormValue("comment"))
+
+	if propertyIDStr == "" || bookingIDStr == "" || ratingStr == "" {
+		http.Error(w, "All fields are required", http.StatusBadRequest)
+		return
+	}
+
+	propertyID, err := strconv.Atoi(propertyIDStr)
+	if err != nil {
+		http.Error(w, "Invalid property ID", http.StatusBadRequest)
+		return
+	}
+
+	bookingID, err := strconv.Atoi(bookingIDStr)
+	if err != nil {
+		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+		return
+	}
+
+	rating, err := strconv.Atoi(ratingStr)
+	if err != nil || rating < 1 || rating > 5 {
+		http.Error(w, "Rating must be between 1 and 5", http.StatusBadRequest)
+		return
+	}
+
+	if len(comment) < 10 {
+		http.Error(w, "Review comment must be at least 10 characters long", http.StatusBadRequest)
+		return
+	}
+
+	err = create_review_with_booking(propertyID, userID, bookingID, rating, comment)
+	if err != nil {
+		http.Error(w, "Error submitting review: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Review submitted successfully"))
+}
+
 func add_listing_handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -694,8 +800,13 @@ func main() {
 	http.HandleFunc("/book", booking_handler)
 	http.HandleFunc("/booking-success", booking_success_handler)
 
+	http.HandleFunc("/enable-review", enable_review_handler)
+	http.HandleFunc("/submit-review", submit_review_handler)
+
 	log.Println("Server starting on :8080")
 
 	init_database()
+
+	update_tables_for_reviews()
 	http.ListenAndServe(":8080", nil)
 }

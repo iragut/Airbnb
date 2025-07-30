@@ -56,6 +56,18 @@ type SearchParams struct {
 	PropertyType string
 	Page         int
 	Limit        int
+
+	Wifi            bool
+	Kitchen         bool
+	AirConditioning bool
+	Parking         bool
+	Pool            bool
+	TV              bool
+	Washer          bool
+	Dryer           bool
+	Heating         bool
+	Balcony         bool
+	PetsAllowed     bool
 }
 
 type ListingsResult struct {
@@ -403,37 +415,87 @@ func search_listings(params SearchParams) (*ListingsResult, error) {
 	args := []interface{}{}
 	countArgs := []interface{}{}
 
+	// Basic search filters
 	if params.Destination != "" {
-		whereConditions = append(whereConditions, "(city LIKE ? OR country LIKE ? OR title LIKE ?)")
+		whereConditions = append(whereConditions, "(p.city LIKE ? OR p.country LIKE ? OR p.title LIKE ?)")
 		searchTerm := "%" + params.Destination + "%"
 		args = append(args, searchTerm, searchTerm, searchTerm)
 		countArgs = append(countArgs, searchTerm, searchTerm, searchTerm)
 	}
 
 	if params.MinPrice > 0 {
-		whereConditions = append(whereConditions, "price >= ?")
+		whereConditions = append(whereConditions, "p.price >= ?")
 		args = append(args, params.MinPrice)
 		countArgs = append(countArgs, params.MinPrice)
 	}
 
 	if params.MaxPrice > 0 {
-		whereConditions = append(whereConditions, "price <= ?")
+		whereConditions = append(whereConditions, "p.price <= ?")
 		args = append(args, params.MaxPrice)
 		countArgs = append(countArgs, params.MaxPrice)
 	}
 
 	if params.PropertyType != "" {
-		whereConditions = append(whereConditions, "type = ?")
+		whereConditions = append(whereConditions, "p.type = ?")
 		args = append(args, params.PropertyType)
 		countArgs = append(countArgs, params.PropertyType)
 	}
 
+	// Amenity filters - only add conditions if amenities are requested
+	amenityConditions := []string{}
+
+	if params.Wifi {
+		amenityConditions = append(amenityConditions, "a.wifi = true")
+	}
+	if params.Kitchen {
+		amenityConditions = append(amenityConditions, "a.kitchen = true")
+	}
+	if params.AirConditioning {
+		amenityConditions = append(amenityConditions, "a.air_conditioning = true")
+	}
+	if params.Parking {
+		amenityConditions = append(amenityConditions, "a.parking = true")
+	}
+	if params.Pool {
+		amenityConditions = append(amenityConditions, "a.pool = true")
+	}
+	if params.TV {
+		amenityConditions = append(amenityConditions, "a.tv = true")
+	}
+	if params.Washer {
+		amenityConditions = append(amenityConditions, "a.washer = true")
+	}
+	if params.Dryer {
+		amenityConditions = append(amenityConditions, "a.dryer = true")
+	}
+	if params.Heating {
+		amenityConditions = append(amenityConditions, "a.heating = true")
+	}
+	if params.Balcony {
+		amenityConditions = append(amenityConditions, "a.balcony = true")
+	}
+	if params.PetsAllowed {
+		amenityConditions = append(amenityConditions, "a.pets_allowed = true")
+	}
+
+	// Build the complete WHERE clause
 	whereClause := strings.Join(whereConditions, " AND ")
 
-	countQuery := `
-		SELECT COUNT(*) 
-		FROM Posts 
-		WHERE ` + whereClause
+	// Determine if we need to JOIN with amenities table
+	joinClause := ""
+	if len(amenityConditions) > 0 {
+		joinClause = "INNER JOIN Amenities a ON p.id = a.post_id"
+		whereClause += " AND " + strings.Join(amenityConditions, " AND ")
+	} else {
+		joinClause = "LEFT JOIN Amenities a ON p.id = a.post_id"
+	}
+
+	// Count query
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(DISTINCT p.id) 
+		FROM Posts p
+		%s
+		WHERE %s`, joinClause, whereClause)
 
 	err := db.QueryRow(countQuery, countArgs...).Scan(&totalCount)
 	if err != nil {
@@ -451,7 +513,8 @@ func search_listings(params SearchParams) (*ListingsResult, error) {
 	offset := (params.Page - 1) * params.Limit
 	totalPages := (totalCount + params.Limit - 1) / params.Limit
 
-	query := `
+	// Main query
+	query := fmt.Sprintf(`
 		SELECT p.id, p.user_id, p.title, p.country, p.city, p.address, 
 		       p.description, p.price, p.type, p.created_at,
 		       COALESCE(MIN(i.image_url), '') as image_url,
@@ -461,11 +524,11 @@ func search_listings(params SearchParams) (*ListingsResult, error) {
 		       COALESCE(MAX(a.parking), false) as has_parking
 		FROM Posts p
 		LEFT JOIN Images i ON p.id = i.post_id
-		LEFT JOIN Amenities a ON p.id = a.post_id
-		WHERE ` + whereClause + `
+		%s
+		WHERE %s
 		GROUP BY p.id, p.user_id, p.title, p.country, p.city, p.address, p.description, p.price, p.type, p.created_at
 		ORDER BY p.created_at DESC
-		LIMIT ? OFFSET ?`
+		LIMIT ? OFFSET ?`, joinClause, whereClause)
 
 	args = append(args, params.Limit, offset)
 
@@ -623,6 +686,184 @@ func create_post(user_id int, title string, country string, city string, address
 		log.Fatalf("Error creating post: %v", err)
 	}
 	log.Println("Post created successfully")
+}
+
+func enable_review_for_booking(bookingID int, hostID int) error {
+	query := `SELECT COUNT(*) FROM Bookings WHERE id = ? AND host_id = ?`
+	var count int
+	err := db.QueryRow(query, bookingID, hostID).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("booking not found or you're not the host")
+	}
+
+	updateQuery := `UPDATE Bookings SET review_enabled = true WHERE id = ? AND host_id = ?`
+	_, err = db.Exec(updateQuery, bookingID, hostID)
+	if err != nil {
+		log.Printf("Error enabling review: %v", err)
+		return err
+	}
+
+	log.Printf("Review enabled for booking %d by host %d", bookingID, hostID)
+	return nil
+}
+
+func can_user_review_property(userID, propertyID int) (bool, int, error) {
+	query := `
+		SELECT id FROM Bookings 
+		WHERE user_id = ? AND post_id = ? AND review_enabled = true
+		AND id NOT IN (SELECT COALESCE(booking_id, 0) FROM Reviews WHERE user_id = ? AND post_id = ?)
+		LIMIT 1`
+
+	var bookingID int
+	err := db.QueryRow(query, userID, propertyID, userID, propertyID).Scan(&bookingID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, 0, nil
+		}
+		return false, 0, err
+	}
+
+	return true, bookingID, nil
+}
+
+func create_review_with_booking(postID, userID, bookingID, rating int, comment string) error {
+	canReview, _, err := can_user_review_property(userID, postID)
+	if err != nil {
+		return err
+	}
+	if !canReview {
+		return fmt.Errorf("you don't have permission to review this property")
+	}
+
+	query := `INSERT INTO Reviews (post_id, user_id, booking_id, rating, comment) VALUES (?, ?, ?, ?, ?)`
+	_, err = db.Exec(query, postID, userID, bookingID, rating, comment)
+	if err != nil {
+		log.Printf("Error creating review: %v", err)
+		return err
+	}
+
+	log.Printf("Review created for property %d by user %d", postID, userID)
+	return nil
+}
+
+func get_host_bookings_for_review_management(hostID int) ([]Booking, error) {
+	var bookings []Booking
+
+	query := `
+		SELECT b.id, b.post_id, b.user_id, b.host_id, b.start_date, b.end_date, 
+		       b.guests, b.total_price, b.created_at, p.title, p.city, u.username,
+		       COALESCE(b.review_enabled, false) as review_enabled,
+		       CASE WHEN r.id IS NOT NULL THEN true ELSE false END as has_review
+		FROM Bookings b
+		JOIN Posts p ON b.post_id = p.id
+		JOIN Users u ON b.user_id = u.id
+		LEFT JOIN Reviews r ON b.id = r.booking_id
+		WHERE b.host_id = ?
+		ORDER BY b.created_at DESC`
+
+	rows, err := db.Query(query, hostID)
+	if err != nil {
+		log.Printf("Error fetching host bookings for review management: %v", err)
+		return bookings, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var booking Booking
+		var reviewEnabled, hasReview bool
+		err := rows.Scan(
+			&booking.ID, &booking.PostID, &booking.UserID, &booking.HostID,
+			&booking.StartDate, &booking.EndDate, &booking.Guests, &booking.TotalPrice,
+			&booking.CreatedAt, &booking.PropertyTitle, &booking.PropertyCity, &booking.UserName,
+			&reviewEnabled, &hasReview,
+		)
+		if err != nil {
+			log.Printf("Error scanning host booking: %v", err)
+			continue
+		}
+
+		// Add custom fields for review management
+		if reviewEnabled {
+			booking.Status = "review_enabled"
+		} else {
+			booking.Status = "completed"
+		}
+
+		bookings = append(bookings, booking)
+	}
+
+	return bookings, nil
+}
+
+func get_user_reviewable_bookings(userID int) ([]Booking, error) {
+	var bookings []Booking
+
+	query := `
+		SELECT b.id, b.post_id, b.user_id, b.host_id, b.start_date, b.end_date, 
+		       b.guests, b.total_price, b.created_at, p.title, p.city,
+		       CASE WHEN r.id IS NOT NULL THEN true ELSE false END as has_review
+		FROM Bookings b
+		JOIN Posts p ON b.post_id = p.id
+		LEFT JOIN Reviews r ON b.id = r.booking_id
+		WHERE b.user_id = ? AND COALESCE(b.review_enabled, false) = true
+		ORDER BY b.created_at DESC`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		log.Printf("Error fetching user reviewable bookings: %v", err)
+		return bookings, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var booking Booking
+		var hasReview bool
+		err := rows.Scan(
+			&booking.ID, &booking.PostID, &booking.UserID, &booking.HostID,
+			&booking.StartDate, &booking.EndDate, &booking.Guests, &booking.TotalPrice,
+			&booking.CreatedAt, &booking.PropertyTitle, &booking.PropertyCity, &hasReview,
+		)
+		if err != nil {
+			log.Printf("Error scanning reviewable booking: %v", err)
+			continue
+		}
+
+		if hasReview {
+			booking.Status = "reviewed"
+		} else {
+			booking.Status = "can_review"
+		}
+
+		bookings = append(bookings, booking)
+	}
+
+	return bookings, nil
+}
+
+func update_tables_for_reviews() {
+	alterBookings := `ALTER TABLE Bookings ADD COLUMN review_enabled BOOLEAN DEFAULT FALSE`
+	_, err := db.Exec(alterBookings)
+	if err != nil {
+		log.Printf("Note: review_enabled column might already exist: %v", err)
+	}
+
+	alterReviews := `ALTER TABLE Reviews ADD COLUMN booking_id INT NULL`
+	_, err = db.Exec(alterReviews)
+	if err != nil {
+		log.Printf("Note: booking_id column might already exist: %v", err)
+	}
+
+	addFK := `ALTER TABLE Reviews ADD CONSTRAINT fk_reviews_booking 
+			  FOREIGN KEY (booking_id) REFERENCES Bookings(id) ON DELETE SET NULL`
+	_, err = db.Exec(addFK)
+	if err != nil {
+		log.Printf("Note: foreign key constraint might already exist: %v", err)
+	}
+
+	log.Println("Tables updated for review system")
 }
 
 func create_posts_test_data() {
