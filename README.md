@@ -6,7 +6,7 @@ It contains basic features like user registration, listing creation, profile edi
 Use Cookie for session management and GET/POST methods for API calls. It connect to MySQL database to store user and listing data.
 If it first time running, it will create the necessary tables in the database and some profile listenings for testing.
 
-![frontend](/images/front.png)
+![frontend](/static/images/front.png)
 
 ## Running the project
 1. Clone the repository:
