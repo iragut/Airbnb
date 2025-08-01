@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Listing - {{.Listing.Title}} - AirBnB Clone</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo">AirBnBClone</a>
+        
+        <div class="auth-buttons">
+            <a href="/my-profile" class="btn btn-login">My Profile</a>
+            <a href="/logout" class="btn btn-signup">Logout</a>
+        </div>
+    </div>
+
+    <div class="edit-listing-container">
+        <div class="edit-listing-header">
+            <h1>Edit Listing</h1>
+            <p>Update your property information and photos</p>
+        </div>
+
+        <form class="edit-listing-form" action="/edit-listing/{{.Listing.ID}}" method="POST" enctype="multipart/form-data">
+            <div class="form-section">
+                <h2>📸 Property Photos</h2>
+                <p class="section-description">Add up to 10 high-quality photos of your property</p>
+
+                <div class="current-images">
+                    <h3>Current Photos</h3>
+                    <div class="image-gallery" id="currentImages">
+                        {{if .Images}}
+                            {{range $index, $image := .Images}}
+                            <div class="image-item" data-image-id="{{$image.ID}}">
+                                <img src="{{$image.ImageURL}}" alt="Property photo {{$index}}">
+                                <button type="button" class="delete-image-btn" onclick="deleteImage('{{$image.ID}}')">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            {{end}}
+                        {{else}}
+                            <div class="no-images">
+                                <p>No photos uploaded yet</p>
+                            </div>
+                        {{end}}
+                    </div>
+                </div>
+
+                <div class="image-upload-section">
+                    <h3>Add New Photos</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" name="images" id="imageInput" multiple accept="image/*" style="display: none;">
+                        <div class="upload-placeholder" onclick="document.getElementById('imageInput').click()">
+                            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                <path d="M24 8V40M8 24H40" stroke="#ccc" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <p>Click to add photos</p>
+                            <small>JPG, PNG, WEBP (max 5MB each)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="new-images-preview" id="newImagesPreview"></div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>📍 Basic Information</h2>
+                
+                <div class="form-group">
+                    <label for="title">Property Title *</label>
+                    <input type="text" id="title" name="title" value="{{.Listing.Title}}" required maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description *</label>
+                    <textarea id="description" name="description" required rows="4">{{.Listing.Description}}</textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="type">Property Type *</label>
+                        <select id="type" name="type" required>
+                            <option value="apartment" {{if eq .Listing.Type "apartment"}}selected{{end}}>Apartment</option>
+                            <option value="house" {{if eq .Listing.Type "house"}}selected{{end}}>House</option>
+                            <option value="room" {{if eq .Listing.Type "room"}}selected{{end}}>Room</option>
+                            <option value="other" {{if eq .Listing.Type "other"}}selected{{end}}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="price">Price per night (USD) *</label>
+                        <input type="number" id="price" name="price" value="{{printf "%.2f" .Listing.Price}}" required min="1" step="0.01">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>🗺️ Location</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="country">Country *</label>
+                        <select id="country" name="country" required>
+                            <option value="United States" {{if eq .Listing.Country "United States"}}selected{{end}}>United States</option>
+                            <option value="United Kingdom" {{if eq .Listing.Country "United Kingdom"}}selected{{end}}>United Kingdom</option>
+                            <option value="France" {{if eq .Listing.Country "France"}}selected{{end}}>France</option>
+                            <option value="Germany" {{if eq .Listing.Country "Germany"}}selected{{end}}>Germany</option>
+                            <option value="Italy" {{if eq .Listing.Country "Italy"}}selected{{end}}>Italy</option>
+                            <option value="Spain" {{if eq .Listing.Country "Spain"}}selected{{end}}>Spain</option>
+                            <option value="Japan" {{if eq .Listing.Country "Japan"}}selected{{end}}>Japan</option>
+                            <option value="Australia" {{if eq .Listing.Country "Australia"}}selected{{end}}>Australia</option>
+                            <option value="Canada" {{if eq .Listing.Country "Canada"}}selected{{end}}>Canada</option>
+                            <option value="Romania" {{if eq .Listing.Country "Romania"}}selected{{end}}>Romania</option>
+                            <option value="UAE" {{if eq .Listing.Country "UAE"}}selected{{end}}>UAE</option>
+                            <option value="Thailand" {{if eq .Listing.Country "Thailand"}}selected{{end}}>Thailand</option>
+                            <option value="Indonesia" {{if eq .Listing.Country "Indonesia"}}selected{{end}}>Indonesia</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="city">City *</label>
+                        <input type="text" id="city" name="city" value="{{.Listing.City}}" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="address">Address *</label>
+                    <input type="text" id="address" name="address" value="{{.Listing.Address}}" required>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>🏠 Amenities</h2>
+                <p class="section-description">Select all amenities that your property offers</p>
+                
+                <div class="amenities-grid">
+                    <div class="amenity-item">
+                        <input type="checkbox" id="wifi" name="wifi" {{if .Amenities.Wifi}}checked{{end}}>
+                        <label for="wifi">
+                            <span class="amenity-icon">📶</span>
+                            Wifi
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="kitchen" name="kitchen" {{if .Amenities.Kitchen}}checked{{end}}>
+                        <label for="kitchen">
+                            <span class="amenity-icon">🍳</span>
+                            Kitchen
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="air_conditioning" name="air_conditioning" {{if .Amenities.AirConditioning}}checked{{end}}>
+                        <label for="air_conditioning">
+                            <span class="amenity-icon">❄️</span>
+                            Air conditioning
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="parking" name="parking" {{if .Amenities.Parking}}checked{{end}}>
+                        <label for="parking">
+                            <span class="amenity-icon">🚗</span>
+                            Free parking
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="pool" name="pool" {{if .Amenities.Pool}}checked{{end}}>
+                        <label for="pool">
+                            <span class="amenity-icon">🏊</span>
+                            Pool
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="tv" name="tv" {{if .Amenities.TV}}checked{{end}}>
+                        <label for="tv">
+                            <span class="amenity-icon">📺</span>
+                            TV
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="washer" name="washer" {{if .Amenities.Washer}}checked{{end}}>
+                        <label for="washer">
+                            <span class="amenity-icon">👕</span>
+                            Washer
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="dryer" name="dryer" {{if .Amenities.Dryer}}checked{{end}}>
+                        <label for="dryer">
+                            <span class="amenity-icon">🌀</span>
+                            Dryer
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="heating" name="heating" {{if .Amenities.Heating}}checked{{end}}>
+                        <label for="heating">
+                            <span class="amenity-icon">🔥</span>
+                            Heating
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="balcony" name="balcony" {{if .Amenities.Balcony}}checked{{end}}>
+                        <label for="balcony">
+                            <span class="amenity-icon">🌿</span>
+                            Balcony
+                        </label>
+                    </div>
+
+                    <div class="amenity-item">
+                        <input type="checkbox" id="pets_allowed" name="pets_allowed" {{if .Amenities.PetsAllowed}}checked{{end}}>
+                        <label for="pets_allowed">
+                            <span class="amenity-icon">🐕</span>
+                            Pets allowed
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section danger-zone">
+                <h2>⚠️ Danger Zone</h2>
+                <p class="section-description">Permanently delete this listing. This action cannot be undone.</p>
+                <button type="button" class="btn btn-delete" onclick="confirmDelete()">Delete Listing</button>
+            </div>
+
+            <!-- Submit -->
+            <div class="form-section">
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-save-listing">Save Changes</button>
+                    <a href="/property/{{.Listing.ID}}" class="btn btn-cancel">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let deletedImages = [];
+
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const preview = document.getElementById('newImagesPreview');
+            preview.innerHTML = '';
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                if (!file.type.startsWith('image/')) {
+                    alert(`${file.name} is not a valid image file`);
+                    continue;
+                }
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    alert(`${file.name} is too large. Maximum size is 5MB`);
+                    continue;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageItem = document.createElement('div');
+                    imageItem.className = 'image-item new-image';
+                    imageItem.innerHTML = `
+                        <img src="${e.target.result}" alt="New photo">
+                        <span class="image-status">New</span>
+                    `;
+                    preview.appendChild(imageItem);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function deleteImage(imageId) {
+            if (confirm('Are you sure you want to delete this image?')) {
+                const imageItem = document.querySelector(`[data-image-id="${imageId}"]`);
+                imageItem.style.opacity = '0.5';
+                imageItem.innerHTML += '<input type="hidden" name="delete_images" value="' + imageId + '">';
+                
+                const deleteBtn = imageItem.querySelector('.delete-image-btn');
+                deleteBtn.textContent = 'Deleted';
+                deleteBtn.disabled = true;
+                deleteBtn.style.background = '#dc3545';
+            }
+        }
+
+        function confirmDelete() {
+            if (confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/delete-listing/{{.Listing.ID}}';
+                
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'confirm_delete';
+                input.value = 'true';
+                
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        document.querySelector('.edit-listing-form').addEventListener('submit', function(e) {
+            const title = document.getElementById('title').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const price = document.getElementById('price').value;
+            
+            if (title.length < 10) {
+                e.preventDefault();
+                alert('Property title must be at least 10 characters long');
+                return;
+            }
+            
+            if (description.length < 50) {
+                e.preventDefault();
+                alert('Description must be at least 50 characters long');
+                return;
+            }
+            
+            if (price <= 0) {
+                e.preventDefault();
+                alert('Price must be greater than 0');
+                return;
+            }
+        });
+
+        const uploadArea = document.getElementById('uploadArea');
+
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            document.getElementById('imageInput').files = files;
+            
+            const event = new Event('change', { bubbles: true });
+            document.getElementById('imageInput').dispatchEvent(event);
+        });
+    </script>
+</body>
+</html>

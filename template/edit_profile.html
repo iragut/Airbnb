@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Profile - AirBnB Clone</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo">AirBnBClone</a>
+        
+        <div class="auth-buttons">
+            <a href="/my-profile" class="btn btn-login">My Profile</a>
+            <a href="/logout" class="btn btn-signup">Logout</a>
+        </div>
+    </div>
+
+    <div class="edit-profile-container">
+        <div class="edit-profile-header">
+            <h1>Edit Profile</h1>
+            <p>Update your personal information</p>
+        </div>
+
+        <form class="edit-profile-form" action="/edit-profile" method="POST">
+            <!-- Personal Information -->
+            <div class="form-section">
+                <h2>👤 Personal Information</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">First Name</label>
+                        <input type="text" id="first_name" name="first_name" value="{{.User.FirstName}}" placeholder="John">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" value="{{.User.LastName}}" placeholder="Doe">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username *</label>
+                    <input type="text" id="username" name="username" value="{{.User.Username}}" required maxlength="30">
+                </div>
+
+                <div class="form-group">
+                    <label for="birth_date">Birth Date</label>
+                    <input type="date" id="birth_date" name="birth_date" value="{{.PersonalData.BirthDate}}">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>📞 Contact Information</h2>
+                
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" value="{{.User.Email}}" required>
+                </div>
+
+                <div class="form-group phone-group">
+                    <label>Phone Number *</label>
+                    <div class="phone-input-group">
+                        <select name="country_code" class="country-select">
+                            <option value="+1" {{if eq .CountryCode "+1"}}selected{{end}}>🇺🇸 +1</option>
+                            <option value="+44" {{if eq .CountryCode "+44"}}selected{{end}}>🇬🇧 +44</option>
+                            <option value="+33" {{if eq .CountryCode "+33"}}selected{{end}}>🇫🇷 +33</option>
+                            <option value="+49" {{if eq .CountryCode "+49"}}selected{{end}}>🇩🇪 +49</option>
+                            <option value="+39" {{if eq .CountryCode "+39"}}selected{{end}}>🇮🇹 +39</option>
+                            <option value="+34" {{if eq .CountryCode "+34"}}selected{{end}}>🇪🇸 +34</option>
+                            <option value="+40" {{if eq .CountryCode "+40"}}selected{{end}}>🇷🇴 +40</option>
+                            <option value="+91" {{if eq .CountryCode "+91"}}selected{{end}}>🇮🇳 +91</option>
+                            <option value="+86" {{if eq .CountryCode "+86"}}selected{{end}}>🇨🇳 +86</option>
+                            <option value="+81" {{if eq .CountryCode "+81"}}selected{{end}}>🇯🇵 +81</option>
+                        </select>
+                        <input type="tel" name="number" value="{{.PhoneNumber}}" placeholder="Phone Number" pattern="[0-9]*" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>🔒 Change Password</h2>
+                <p class="section-description">Leave blank if you don't want to change your password</p>
+                
+                <div class="form-group password-group">
+                    <label for="current_password">Current Password</label>
+                    <input type="password" id="current_password" name="current_password" placeholder="Enter current password">
+                    <button type="button" class="toggle-password" onclick="togglePassword('current_password')">👁️</button>
+                </div>
+
+                <div class="form-group password-group">
+                    <label for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" placeholder="Enter new password">
+                    <button type="button" class="toggle-password" onclick="togglePassword('new_password')">👁️</button>
+                </div>
+
+                <div class="form-group password-group">
+                    <label for="confirm_password">Confirm New Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password">
+                    <button type="button" class="toggle-password" onclick="togglePassword('confirm_password')">👁️</button>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-save-profile">Save Changes</button>
+                    <a href="/my-profile" class="btn btn-cancel">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            const button = field.nextElementSibling;
+            
+            if (field.type === 'password') {
+                field.type = 'text';
+                button.textContent = 'V';
+            } else {
+                field.type = 'password';
+                button.textContent = 'V';
+            }
+        }
+
+        document.querySelector('.edit-profile-form').addEventListener('submit', function(e) {
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            const currentPassword = document.getElementById('current_password').value;
+            
+            if (newPassword || confirmPassword || currentPassword) {
+                if (!currentPassword) {
+                    e.preventDefault();
+                    alert('Please enter your current password to change it');
+                    return;
+                }
+                
+                if (newPassword !== confirmPassword) {
+                    e.preventDefault();
+                    alert('New passwords do not match');
+                    return;
+                }
+                
+                if (newPassword.length < 8) {
+                    e.preventDefault();
+                    alert('New password must be at least 8 characters long');
+                    return;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

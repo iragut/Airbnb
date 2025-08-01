@@ -53,7 +53,7 @@
                         </div>
                     </div>
                     <div class="profile-actions">
-                        <button class="btn btn-edit">Edit Profile</button>
+                        <a href="/edit-profile" class="btn btn-edit">Edit Profile</a>
                         <button class="btn btn-settings">Settings</button>
                     </div>
                 </div>
@@ -238,6 +238,16 @@
                                     </svg>
                                 </div>
                                 {{end}}
+                                
+                                {{if $.IsOwnProfile}}
+                                    <a href="/edit-listing/{{.ID}}" class="listing-edit-btn" onclick="event.stopPropagation();">
+                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                            <path d="M8.5 1c-.5 0-1 .2-1.4.6L2 6.7v2.8h2.8l5.1-5.1c.8-.8.8-2 0-2.8L8.5 1zM7.8 2.4L9.6 4.2 4.2 9.5H2.5V7.8l5.3-5.4z"/>
+                                        </svg>
+                                        Edit
+                                    </a>
+                                {{end}}
+                                
                                 <button class="wishlist-btn" onclick="event.stopPropagation(); toggleWishlist('{{.ID}}')">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -303,7 +313,7 @@
         </div>
     </div>
 
-    <!-- Review Modal - Fixed Structure -->
+    <!-- Review Modal -->
     <div id="reviewModal" class="review-modal-overlay" style="display: none;">
         <div class="review-modal-dialog">
             <div class="review-modal-content">
@@ -358,13 +368,13 @@
             document.getElementById('reviewBookingId').value = bookingId;
             document.getElementById('reviewPropertyTitle').textContent = propertyTitle;
             document.getElementById('reviewModal').style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+            document.body.style.overflow = 'hidden';
         }
 
         function closeReviewModal() {
             document.getElementById('reviewModal').style.display = 'none';
             document.getElementById('reviewForm').reset();
-            document.body.style.overflow = 'auto'; // Restore scrolling
+            document.body.style.overflow = 'auto';
         }
 
         function enableReview(bookingId, guestName, propertyTitle) {
@@ -422,12 +432,10 @@
         const stars = document.querySelectorAll('.star-rating input');
         stars.forEach((star, index) => {
             star.addEventListener('change', function() {
-                // Update visual feedback if needed
                 console.log('Rating selected:', this.value);
             });
         });
 
-        // Close modal when clicking outside the modal content
         document.getElementById('reviewModal').addEventListener('click', function(event) {
             if (event.target === this) {
                 closeReviewModal();

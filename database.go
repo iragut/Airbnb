@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -145,44 +146,6 @@ func create_listing(user_id int, title string, country string, city string, addr
 	return int(listingID), nil
 }
 
-func get_countries() []string {
-	return []string{
-		"United States",
-		"United Kingdom",
-		"France",
-		"Germany",
-		"Italy",
-		"Spain",
-		"Japan",
-		"Australia",
-		"Canada",
-		"Netherlands",
-		"Switzerland",
-		"Austria",
-		"Belgium",
-		"Portugal",
-		"Greece",
-		"Croatia",
-		"Czech Republic",
-		"Poland",
-		"Hungary",
-		"Romania",
-		"UAE",
-		"Thailand",
-		"Indonesia",
-		"Malaysia",
-		"Singapore",
-		"South Korea",
-		"China",
-		"India",
-		"Brazil",
-		"Mexico",
-		"Argentina",
-		"Chile",
-		"Colombia",
-	}
-}
-
 func create_booking(postID, userID, hostID, guests int, startDate, endDate string, totalPrice float64) error {
 	// First check if dates are available
 	available, err := check_availability(postID, startDate, endDate)
@@ -253,42 +216,6 @@ func get_user_bookings(userID int) ([]Booking, error) {
 		)
 		if err != nil {
 			log.Printf("Error scanning booking: %v", err)
-			continue
-		}
-		bookings = append(bookings, booking)
-	}
-
-	return bookings, nil
-}
-
-func get_host_bookings(hostID int) ([]Booking, error) {
-	var bookings []Booking
-
-	query := `
-		SELECT b.id, b.post_id, b.user_id, b.host_id, b.start_date, b.end_date, 
-		       b.guests, b.total_price, b.created_at, p.title, p.city, u.username
-		FROM Bookings b
-		JOIN Posts p ON b.post_id = p.id
-		JOIN Users u ON b.user_id = u.id
-		WHERE b.host_id = ?
-		ORDER BY b.created_at DESC`
-
-	rows, err := db.Query(query, hostID)
-	if err != nil {
-		log.Printf("Error fetching host bookings: %v", err)
-		return bookings, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var booking Booking
-		err := rows.Scan(
-			&booking.ID, &booking.PostID, &booking.UserID, &booking.HostID,
-			&booking.StartDate, &booking.EndDate, &booking.Guests, &booking.TotalPrice,
-			&booking.CreatedAt, &booking.PropertyTitle, &booking.PropertyCity, &booking.UserName,
-		)
-		if err != nil {
-			log.Printf("Error scanning host booking: %v", err)
 			continue
 		}
 		bookings = append(bookings, booking)
@@ -405,6 +332,295 @@ func get_property_detail(propertyID int) (*PropertyDetail, error) {
 		Amenities: &amenities,
 		Reviews:   reviews,
 	}, nil
+}
+
+func get_personal_data(userID int) *PersonalData {
+	query := `SELECT user_id, COALESCE(first_name, ''), COALESCE(last_name, ''), COALESCE(birth_date, '') 
+			  FROM PersonalData WHERE user_id = ?`
+
+	var personalData PersonalData
+	err := db.QueryRow(query, userID).Scan(
+		&personalData.UserID, &personalData.FirstName,
+		&personalData.LastName, &personalData.BirthDate,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Return empty personal data if none exists
+			return &PersonalData{UserID: userID}
+		}
+		log.Printf("Error querying personal data: %v", err)
+		return &PersonalData{UserID: userID}
+	}
+
+	return &personalData
+}
+
+func parse_phone_number(fullPhoneNumber string) (string, string) {
+	// Simple regex to extract country code and number
+	re := regexp.MustCompile(`^(\+\d{1,4})(.+)$`)
+	matches := re.FindStringSubmatch(fullPhoneNumber)
+
+	if len(matches) == 3 {
+		return matches[1], matches[2] // country code, number
+	}
+
+	return "+1", fullPhoneNumber
+}
+
+func verify_current_password(userID int, currentPassword string) bool {
+	query := "SELECT password FROM Users WHERE id = ?"
+
+	var storedPassword string
+	err := db.QueryRow(query, userID).Scan(&storedPassword)
+	if err != nil {
+		log.Printf("Error querying password: %v", err)
+		return false
+	}
+
+	return CheckPasswordHash(currentPassword, storedPassword)
+}
+
+func update_user_password(userID int, newPassword string) error {
+	hashedPassword, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	query := "UPDATE Users SET password = ? WHERE id = ?"
+	_, err = db.Exec(query, hashedPassword, userID)
+	if err != nil {
+		log.Printf("Error updating password: %v", err)
+		return err
+	}
+
+	log.Printf("Password updated for user %d", userID)
+	return nil
+}
+
+func update_user_profile(userID int, username, email, phoneNumber string) error {
+	query := "UPDATE Users SET username = ?, email = ?, phone_number = ? WHERE id = ?"
+
+	_, err := db.Exec(query, username, email, phoneNumber, userID)
+	if err != nil {
+		log.Printf("Error updating user profile: %v", err)
+		return err
+	}
+
+	log.Printf("Profile updated for user %d", userID)
+	return nil
+}
+
+func update_personal_data(userID int, firstName, lastName, birthDate string) error {
+	var count int
+	checkQuery := "SELECT COUNT(*) FROM PersonalData WHERE user_id = ?"
+	err := db.QueryRow(checkQuery, userID).Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	var query string
+	if count > 0 {
+		// Update existing record
+		query = "UPDATE PersonalData SET first_name = ?, last_name = ?, birth_date = ? WHERE user_id = ?"
+		_, err = db.Exec(query, firstName, lastName, birthDate, userID)
+	} else {
+		// Insert new record
+		query = "INSERT INTO PersonalData (user_id, first_name, last_name, birth_date) VALUES (?, ?, ?, ?)"
+		_, err = db.Exec(query, userID, firstName, lastName, birthDate)
+	}
+
+	if err != nil {
+		log.Printf("Error updating personal data: %v", err)
+		return err
+	}
+
+	log.Printf("Personal data updated for user %d", userID)
+	return nil
+}
+
+func get_listing_amenities(listingID int) *PropertyAmenities {
+	query := `SELECT post_id, wifi, air_conditioning, kitchen, parking, pets_allowed, 
+			  pool, washer, dryer, tv, heating, balcony 
+			  FROM Amenities WHERE post_id = ?`
+
+	var amenities PropertyAmenities
+	err := db.QueryRow(query, listingID).Scan(
+		&amenities.PostID, &amenities.Wifi, &amenities.AirConditioning,
+		&amenities.Kitchen, &amenities.Parking, &amenities.PetsAllowed,
+		&amenities.Pool, &amenities.Washer, &amenities.Dryer,
+		&amenities.TV, &amenities.Heating, &amenities.Balcony,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Return empty amenities if none exist
+			return &PropertyAmenities{PostID: listingID}
+		}
+		log.Printf("Error querying amenities: %v", err)
+		return &PropertyAmenities{PostID: listingID}
+	}
+
+	return &amenities
+}
+
+func get_listing_images(listingID int) []PropertyImage {
+	var images []PropertyImage
+
+	query := "SELECT id, post_id, image_url FROM Images WHERE post_id = ? ORDER BY id ASC"
+	rows, err := db.Query(query, listingID)
+	if err != nil {
+		log.Printf("Error querying listing images: %v", err)
+		return images
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var image PropertyImage
+		err := rows.Scan(&image.ID, &image.PostID, &image.ImageURL)
+		if err != nil {
+			log.Printf("Error scanning image: %v", err)
+			continue
+		}
+		images = append(images, image)
+	}
+
+	return images
+}
+
+func update_listing(listingID int, title, country, city, address, description string, price float64, propertyType string) error {
+	query := `UPDATE Posts SET title = ?, country = ?, city = ?, address = ?, 
+			  description = ?, price = ?, type = ? WHERE id = ?`
+
+	_, err := db.Exec(query, title, country, city, address, description, price, propertyType, listingID)
+	if err != nil {
+		log.Printf("Error updating listing: %v", err)
+		return err
+	}
+
+	log.Printf("Listing %d updated successfully", listingID)
+	return nil
+}
+
+func update_listing_amenities(listingID int, wifi, ac, kitchen, parking, pets, pool, washer, dryer, tv, heating, balcony bool) error {
+	// Check if amenities exist
+	var count int
+	checkQuery := "SELECT COUNT(*) FROM Amenities WHERE post_id = ?"
+	err := db.QueryRow(checkQuery, listingID).Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	var query string
+	if count > 0 {
+		// Update existing amenities
+		query = `UPDATE Amenities SET wifi = ?, air_conditioning = ?, kitchen = ?, 
+				 parking = ?, pets_allowed = ?, pool = ?, washer = ?, dryer = ?, 
+				 tv = ?, heating = ?, balcony = ? WHERE post_id = ?`
+		_, err = db.Exec(query, wifi, ac, kitchen, parking, pets, pool, washer, dryer, tv, heating, balcony, listingID)
+	} else {
+		// Insert new amenities
+		query = `INSERT INTO Amenities (post_id, wifi, air_conditioning, kitchen, parking, 
+				 pets_allowed, pool, washer, dryer, tv, heating, balcony) 
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err = db.Exec(query, listingID, wifi, ac, kitchen, parking, pets, pool, washer, dryer, tv, heating, balcony)
+	}
+
+	if err != nil {
+		log.Printf("Error updating amenities: %v", err)
+		return err
+	}
+
+	log.Printf("Amenities updated for listing %d", listingID)
+	return nil
+}
+
+func save_listing_image(listingID int, imageURL string) error {
+	query := "INSERT INTO Images (post_id, image_url) VALUES (?, ?)"
+
+	_, err := db.Exec(query, listingID, imageURL)
+	if err != nil {
+		log.Printf("Error saving listing image: %v", err)
+		return err
+	}
+
+	log.Printf("Image saved for listing %d: %s", listingID, imageURL)
+	return nil
+}
+
+func delete_listing_image(imageID, listingID int) error {
+	// First get the image URL to delete the file
+	var imageURL string
+	query := "SELECT image_url FROM Images WHERE id = ? AND post_id = ?"
+	err := db.QueryRow(query, imageID, listingID).Scan(&imageURL)
+	if err != nil {
+		log.Printf("Error finding image to delete: %v", err)
+		return err
+	}
+
+	// Delete from database
+	deleteQuery := "DELETE FROM Images WHERE id = ? AND post_id = ?"
+	_, err = db.Exec(deleteQuery, imageID, listingID)
+	if err != nil {
+		log.Printf("Error deleting image from database: %v", err)
+		return err
+	}
+
+	// Delete the actual file
+	if imageURL != "" {
+		filePath := "." + imageURL // Remove leading slash and add current directory
+		err = os.Remove(filePath)
+		if err != nil {
+			log.Printf("Warning: Could not delete image file %s: %v", filePath, err)
+			// Don't return error here as database deletion was successful
+		}
+	}
+
+	log.Printf("Image %d deleted for listing %d", imageID, listingID)
+	return nil
+}
+
+func delete_listing_by_owner(listingID, userID int) error {
+	// First verify ownership
+	var ownerID int
+	checkQuery := "SELECT user_id FROM Posts WHERE id = ?"
+	err := db.QueryRow(checkQuery, listingID).Scan(&ownerID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("listing not found")
+		}
+		return err
+	}
+
+	if ownerID != userID {
+		return fmt.Errorf("you don't own this listing")
+	}
+
+	// Delete all images first (this will cascade delete the files)
+	images := get_listing_images(listingID)
+	for _, image := range images {
+		delete_listing_image(image.ID, listingID)
+	}
+
+	// Delete the listing (this will cascade delete related records due to foreign key constraints)
+	deleteQuery := "DELETE FROM Posts WHERE id = ? AND user_id = ?"
+	result, err := db.Exec(deleteQuery, listingID, userID)
+	if err != nil {
+		log.Printf("Error deleting listing: %v", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("listing not found or access denied")
+	}
+
+	log.Printf("Listing %d deleted by user %d", listingID, userID)
+	return nil
 }
 
 func search_listings(params SearchParams) (*ListingsResult, error) {

@@ -1,15 +1,25 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"html/template"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/sessions"
+	"github.com/nfnt/resize"
 )
 
 var (
@@ -23,6 +33,432 @@ type AuthContext struct {
 	IsAuthenticated bool
 	UserID          int
 	Username        string
+}
+
+type PersonalData struct {
+	UserID    int
+	FirstName string
+	LastName  string
+	BirthDate string
+}
+
+// Image struct for listing images
+type PropertyImage struct {
+	ID       int
+	PostID   int
+	ImageURL string
+}
+
+func edit_profile_handler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		authenticated, userID := is_authenticated(r)
+		if !authenticated {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		authCtx := get_auth(r)
+		userData := get_user_data(userID)
+		if userData == nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
+		// Get personal data
+		personalData := get_personal_data(userID)
+
+		// Parse phone number to get country code and number
+		countryCode, phoneNumber := parse_phone_number(userData.PhoneNumber)
+
+		templateData := struct {
+			Auth         AuthContext
+			User         *UserData
+			PersonalData *PersonalData
+			CountryCode  string
+			PhoneNumber  string
+		}{
+			Auth:         authCtx,
+			User:         userData,
+			PersonalData: personalData,
+			CountryCode:  countryCode,
+			PhoneNumber:  phoneNumber,
+		}
+
+		tmpl := template.Must(template.ParseFiles("template/edit_profile.html"))
+		err := tmpl.Execute(w, templateData)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Println("Error executing template:", err)
+		}
+
+	case http.MethodPost:
+		authenticated, userID := is_authenticated(r)
+		if !authenticated {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// Parse form data
+		firstName := strings.TrimSpace(r.FormValue("first_name"))
+		lastName := strings.TrimSpace(r.FormValue("last_name"))
+		username := strings.TrimSpace(r.FormValue("username"))
+		email := strings.TrimSpace(r.FormValue("email"))
+		birthDate := r.FormValue("birth_date")
+		countryCode := r.FormValue("country_code")
+		phoneNumber := r.FormValue("number")
+
+		// Password fields
+		currentPassword := r.FormValue("current_password")
+		newPassword := r.FormValue("new_password")
+		confirmPassword := r.FormValue("confirm_password")
+
+		// Validate required fields
+		if username == "" || email == "" || phoneNumber == "" {
+			http.Error(w, "Username, email, and phone number are required", http.StatusBadRequest)
+			return
+		}
+
+		// Validate password change if provided
+		if currentPassword != "" || newPassword != "" || confirmPassword != "" {
+			if currentPassword == "" {
+				http.Error(w, "Current password is required to change password", http.StatusBadRequest)
+				return
+			}
+
+			// Verify current password
+			if !verify_current_password(userID, currentPassword) {
+				http.Error(w, "Current password is incorrect", http.StatusBadRequest)
+				return
+			}
+
+			if newPassword != confirmPassword {
+				http.Error(w, "New passwords do not match", http.StatusBadRequest)
+				return
+			}
+
+			if len(newPassword) < 8 {
+				http.Error(w, "New password must be at least 8 characters long", http.StatusBadRequest)
+				return
+			}
+
+			// Update password
+			err := update_user_password(userID, newPassword)
+			if err != nil {
+				http.Error(w, "Error updating password", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		// Update user data
+		fullPhoneNumber := countryCode + phoneNumber
+		err := update_user_profile(userID, username, email, fullPhoneNumber)
+		if err != nil {
+			http.Error(w, "Error updating profile: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Update personal data
+		err = update_personal_data(userID, firstName, lastName, birthDate)
+		if err != nil {
+			log.Printf("Error updating personal data: %v", err)
+		}
+
+		// Redirect back to profile
+		http.Redirect(w, r, "/my-profile", http.StatusSeeOther)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func edit_listing_handler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		authenticated, userID := is_authenticated(r)
+		if !authenticated {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// Extract listing ID from URL
+		path := strings.TrimPrefix(r.URL.Path, "/edit-listing/")
+		if path == "" {
+			http.Error(w, "Listing ID is required", http.StatusBadRequest)
+			return
+		}
+
+		listingID, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid listing ID", http.StatusBadRequest)
+			return
+		}
+
+		// Get listing details
+		listing, err := get_listing_by_id(listingID)
+		if err != nil || listing == nil {
+			http.Error(w, "Listing not found", http.StatusNotFound)
+			return
+		}
+
+		// Check if user owns this listing
+		if listing.UserID != userID {
+			http.Error(w, "You don't own this listing", http.StatusForbidden)
+			return
+		}
+
+		// Get amenities
+		amenities := get_listing_amenities(listingID)
+
+		// Get images
+		images := get_listing_images(listingID)
+
+		authCtx := get_auth(r)
+
+		templateData := struct {
+			Auth      AuthContext
+			Listing   *Listing
+			Amenities *PropertyAmenities
+			Images    []PropertyImage
+		}{
+			Auth:      authCtx,
+			Listing:   listing,
+			Amenities: amenities,
+			Images:    images,
+		}
+
+		tmpl := template.Must(template.ParseFiles("template/edit_listing.html"))
+		err = tmpl.Execute(w, templateData)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Println("Error executing template:", err)
+		}
+
+	case http.MethodPost:
+		authenticated, userID := is_authenticated(r)
+		if !authenticated {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// Extract listing ID from URL
+		path := strings.TrimPrefix(r.URL.Path, "/edit-listing/")
+		listingID, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid listing ID", http.StatusBadRequest)
+			return
+		}
+
+		// Verify ownership
+		listing, err := get_listing_by_id(listingID)
+		if err != nil || listing == nil || listing.UserID != userID {
+			http.Error(w, "Listing not found or access denied", http.StatusForbidden)
+			return
+		}
+
+		// Parse multipart form for file uploads
+		err = r.ParseMultipartForm(10 << 20) // 10 MB max
+		if err != nil {
+			http.Error(w, "Error parsing form", http.StatusBadRequest)
+			return
+		}
+
+		// Handle image deletions
+		deleteImages := r.Form["delete_images"]
+		for _, imageIDStr := range deleteImages {
+			imageID, err := strconv.Atoi(imageIDStr)
+			if err == nil {
+				delete_listing_image(imageID, listingID)
+			}
+		}
+
+		// Handle new image uploads
+		files := r.MultipartForm.File["images"]
+		for _, fileHeader := range files {
+			err := save_uploaded_image(fileHeader, listingID)
+			if err != nil {
+				log.Printf("Error uploading image: %v", err)
+				// Continue with other images even if one fails
+			}
+		}
+
+		// Update listing details
+		title := strings.TrimSpace(r.FormValue("title"))
+		description := strings.TrimSpace(r.FormValue("description"))
+		country := strings.TrimSpace(r.FormValue("country"))
+		city := strings.TrimSpace(r.FormValue("city"))
+		address := strings.TrimSpace(r.FormValue("address"))
+		priceStr := r.FormValue("price")
+		propertyType := r.FormValue("type")
+
+		// Validate input
+		if title == "" || description == "" || country == "" || city == "" || address == "" || priceStr == "" || propertyType == "" {
+			http.Error(w, "All required fields must be filled", http.StatusBadRequest)
+			return
+		}
+
+		price, err := strconv.ParseFloat(priceStr, 64)
+		if err != nil || price <= 0 {
+			http.Error(w, "Invalid price", http.StatusBadRequest)
+			return
+		}
+
+		// Update listing
+		err = update_listing(listingID, title, country, city, address, description, price, propertyType)
+		if err != nil {
+			http.Error(w, "Error updating listing: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Update amenities
+		wifi := r.FormValue("wifi") == "on"
+		kitchen := r.FormValue("kitchen") == "on"
+		ac := r.FormValue("air_conditioning") == "on"
+		parking := r.FormValue("parking") == "on"
+		pool := r.FormValue("pool") == "on"
+		washer := r.FormValue("washer") == "on"
+		dryer := r.FormValue("dryer") == "on"
+		tv := r.FormValue("tv") == "on"
+		heating := r.FormValue("heating") == "on"
+		balcony := r.FormValue("balcony") == "on"
+		pets := r.FormValue("pets_allowed") == "on"
+
+		err = update_listing_amenities(listingID, wifi, ac, kitchen, parking, pets, pool, washer, dryer, tv, heating, balcony)
+		if err != nil {
+			log.Printf("Error updating amenities: %v", err)
+		}
+
+		// Redirect to the listing
+		http.Redirect(w, r, "/property/"+strconv.Itoa(listingID), http.StatusSeeOther)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func delete_listing_handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	authenticated, userID := is_authenticated(r)
+	if !authenticated {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Extract listing ID from URL
+	path := strings.TrimPrefix(r.URL.Path, "/delete-listing/")
+	listingID, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid listing ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify ownership and delete
+	err = delete_listing_by_owner(listingID, userID)
+	if err != nil {
+		http.Error(w, "Error deleting listing: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Redirect to profile
+	http.Redirect(w, r, "/my-profile", http.StatusSeeOther)
+}
+
+func save_uploaded_image(fileHeader *multipart.FileHeader, listingID int) error {
+	// Open uploaded file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Validate file type
+	if !isValidImageType(fileHeader.Header.Get("Content-Type")) {
+		return fmt.Errorf("invalid image type")
+	}
+
+	// Generate unique filename
+	filename := generate_unique_filename(fileHeader.Filename)
+
+	// Create uploads directory if it doesn't exist
+	uploadsDir := "static/uploads"
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		return err
+	}
+
+	// Full path for the file
+	filePath := filepath.Join(uploadsDir, filename)
+
+	// Create the file
+	dst, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	// Decode and resize image
+	img, format, err := image.Decode(file)
+	if err != nil {
+		return err
+	}
+
+	// Resize image to max 1200px width while maintaining aspect ratio
+	resized := resize.Resize(1200, 0, img, resize.Lanczos3)
+
+	// Encode and save
+	switch format {
+	case "jpeg":
+		err = jpeg.Encode(dst, resized, &jpeg.Options{Quality: 85})
+	case "png":
+		err = png.Encode(dst, resized)
+	default:
+		// Default to JPEG
+		err = jpeg.Encode(dst, resized, &jpeg.Options{Quality: 85})
+		filename = strings.TrimSuffix(filename, filepath.Ext(filename)) + ".jpg"
+		filePath = filepath.Join(uploadsDir, filename)
+	}
+
+	if err != nil {
+		os.Remove(filePath) // Clean up on error
+		return err
+	}
+
+	// Save to database
+	imageURL := "/static/uploads/" + filename
+	return save_listing_image(listingID, imageURL)
+}
+
+func isValidImageType(contentType string) bool {
+	validTypes := []string{
+		"image/jpeg",
+		"image/jpg",
+		"image/png",
+		"image/webp",
+		"image/gif",
+	}
+
+	for _, validType := range validTypes {
+		if contentType == validType {
+			return true
+		}
+	}
+	return false
+}
+
+func generate_unique_filename(originalName string) string {
+	// Generate random bytes
+	bytes := make([]byte, 16)
+	rand.Read(bytes)
+
+	// Create unique filename with timestamp and random string
+	ext := filepath.Ext(originalName)
+	timestamp := time.Now().Unix()
+	randomStr := hex.EncodeToString(bytes)
+
+	return fmt.Sprintf("%d_%s%s", timestamp, randomStr, ext)
 }
 
 func get_auth(r *http.Request) AuthContext {
@@ -803,10 +1239,18 @@ func main() {
 	http.HandleFunc("/enable-review", enable_review_handler)
 	http.HandleFunc("/submit-review", submit_review_handler)
 
+	http.HandleFunc("/edit-profile", edit_profile_handler)
+	http.HandleFunc("/edit-listing/", edit_listing_handler)
+	http.HandleFunc("/delete-listing/", delete_listing_handler)
+
 	log.Println("Server starting on :8080")
 
 	init_database()
 
 	update_tables_for_reviews()
+
+	if err := os.MkdirAll("static/uploads", 0755); err != nil {
+		log.Printf("Warning: Could not create uploads directory: %v", err)
+	}
 	http.ListenAndServe(":8080", nil)
 }
